@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "OmegaBot"
+version = "1.0.0"
+id = "artifacts/omegabot"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25662
+
+[services.development]
+run = "pnpm --filter @workspace/omegabot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/omegabot", "run", "build" ]
+publicDir = "artifacts/omegabot/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25662"
+BASE_PATH = "/"

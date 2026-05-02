@@ -1,0 +1,173 @@
+import { useState, useMemo } from "react";
+import { Save, RefreshCw } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import { MOCK_SETTINGS, MOCK_LLM_MODELS } from "@/lib/mock-data";
+
+type Settings = typeof MOCK_SETTINGS;
+
+export default function Settings() {
+  const { data: rawSettings, isError } = useGetSettings({ query: { queryKey: ["settings"], retry: false } });
+  const updateSettings = useUpdateSettings();
+  const [saved, setSaved] = useState(false);
+
+  const initial = useMemo(() => (isError || !rawSettings) ? MOCK_SETTINGS : rawSettings as Settings, [rawSettings, isError]);
+  const [form, setForm] = useState<Settings>(MOCK_SETTINGS);
+  const isDemo = isError || !rawSettings;
+
+  useMemo(() => { setForm(initial); }, [initial]);
+
+  function set<K extends keyof Settings>(key: K, value: Settings[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleSave() {
+    updateSettings.mutate({ data: form });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold">Settings</h1>
+          <p className="text-sm text-muted-foreground">Platform configuration</p>
+        </div>
+        <div className="flex gap-2 items-center">
+          {isDemo && <Badge variant="outline" className="text-xs text-muted-foreground">demo data</Badge>}
+          {saved && <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Saved</span>}
+          <Button size="sm" className="gap-1.5" onClick={handleSave}>
+            <Save className="h-3.5 w-3.5" /> Save Changes
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl space-y-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">General</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="systemName">System name</Label>
+                <Input id="systemName" value={form.systemName} onChange={(e) => set("systemName", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Version</Label>
+                <Input value={form.version ?? ""} readOnly className="text-muted-foreground bg-muted/30" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Log level</Label>
+              <Select value={form.logLevel} onValueChange={(v) => set("logLevel", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["debug", "info", "warn", "error"].map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Webhook URL</Label>
+              <Input placeholder="https://your-server.com/webhook" value={form.webhookUrl ?? ""} onChange={(e) => set("webhookUrl", e.target.value)} />
+              <p className="text-xs text-muted-foreground">Receive event notifications at this endpoint</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">LLM</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Default LLM model</Label>
+              <Select value={form.defaultLlmModelId} onValueChange={(v) => set("defaultLlmModelId", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MOCK_LLM_MODELS.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.provider}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Used when no routing rule matches</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Approvals & Safety</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Require approval for high-risk actions</div>
+                <p className="text-xs text-muted-foreground">Gate commands marked isHighRisk behind human approval</p>
+              </div>
+              <Switch checked={form.requireApprovalForHighRisk} onCheckedChange={(v) => set("requireApprovalForHighRisk", v)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Approval timeout (minutes)</Label>
+              <Input type="number" value={form.approvalTimeoutMinutes} onChange={(e) => set("approvalTimeoutMinutes", Number(e.target.value))} className="w-32" />
+              <p className="text-xs text-muted-foreground">Requests not acted on within this time are auto-rejected</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Runtime</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Max concurrent tasks</Label>
+                <Input type="number" value={form.maxConcurrentTasks} onChange={(e) => set("maxConcurrentTasks", Number(e.target.value))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Max retries</Label>
+                <Input type="number" value={form.maxRetries} onChange={(e) => set("maxRetries", Number(e.target.value))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Retry delay (ms)</Label>
+                <Input type="number" value={form.retryDelayMs} onChange={(e) => set("retryDelayMs", Number(e.target.value))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Staleness threshold (ms)</Label>
+                <Input type="number" value={form.stalenessThresholdMs} onChange={(e) => set("stalenessThresholdMs", Number(e.target.value))} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Features</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Event streaming</div>
+                <p className="text-xs text-muted-foreground">Emit real-time events via SSE for monitoring</p>
+              </div>
+              <Switch checked={form.enableEventStreaming} onCheckedChange={(v) => set("enableEventStreaming", v)} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Idempotency</div>
+                <p className="text-xs text-muted-foreground">Detect and deduplicate commands with matching idempotency keys</p>
+              </div>
+              <Switch checked={form.enableIdempotency} onCheckedChange={(v) => set("enableIdempotency", v)} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -3,20 +3,41 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OmegaBot platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: tasks
+    description: Task management
+  - name: runs
+    description: Task runs
+  - name: commands
+    description: Durable commands
+  - name: approvals
+    description: Approval requests
+  - name: events
+    description: Event timeline
+  - name: adapters
+    description: Adapter registry and health
+  - name: llm
+    description: LLM routing and models
+  - name: integrations
+    description: Platform integrations
+  - name: github
+    description: GitHub change plans
+  - name: artifacts
+    description: Artifact store
+  - name: settings
+    description: System settings
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +45,531 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all tasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, paused]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a new task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskBody"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/runs:
+    get:
+      operationId: getTaskRuns
+      tags: [runs]
+      summary: Get runs for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Runs list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunList"
+
+  /runs:
+    get:
+      operationId: listRuns
+      tags: [runs]
+      summary: List all runs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Run list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunList"
+
+  /commands:
+    get:
+      operationId: listCommands
+      tags: [commands]
+      summary: List all commands
+      responses:
+        "200":
+          description: Command list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandList"
+    post:
+      operationId: createCommand
+      tags: [commands]
+      summary: Issue a durable command
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommandBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Command"
+
+  /commands/{id}:
+    get:
+      operationId: getCommand
+      tags: [commands]
+      summary: Get command by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Command"
+
+  /command-groups:
+    get:
+      operationId: listCommandGroups
+      tags: [commands]
+      summary: List command groups
+      responses:
+        "200":
+          description: Command groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandGroupList"
+    post:
+      operationId: createCommandGroup
+      tags: [commands]
+      summary: Create command group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommandGroupBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandGroup"
+
+  /approvals:
+    get:
+      operationId: listApprovals
+      tags: [approvals]
+      summary: List approval requests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, expired]
+      responses:
+        "200":
+          description: Approvals list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalList"
+
+  /approvals/{id}/approve:
+    post:
+      operationId: approveRequest
+      tags: [approvals]
+      summary: Approve a request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionBody"
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+
+  /approvals/{id}/reject:
+    post:
+      operationId: rejectRequest
+      tags: [approvals]
+      summary: Reject a request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionBody"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: Get event timeline
+      parameters:
+        - name: taskId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: since
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+
+  /adapters:
+    get:
+      operationId: listAdapters
+      tags: [adapters]
+      summary: List all adapters
+      responses:
+        "200":
+          description: Adapter list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdapterList"
+
+  /adapters/{id}/health:
+    get:
+      operationId: getAdapterHealth
+      tags: [adapters]
+      summary: Get adapter health
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Health check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdapterHealth"
+
+  /llm/models:
+    get:
+      operationId: listLlmModels
+      tags: [llm]
+      summary: List available LLM models
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmModelList"
+
+  /llm/routes:
+    get:
+      operationId: listLlmRoutes
+      tags: [llm]
+      summary: List LLM routing rules
+      responses:
+        "200":
+          description: Route list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmRouteList"
+    post:
+      operationId: createLlmRoute
+      tags: [llm]
+      summary: Create an LLM routing rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLlmRouteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmRoute"
+
+  /llm/usage:
+    get:
+      operationId: getLlmUsage
+      tags: [llm]
+      summary: Get LLM usage summary
+      responses:
+        "200":
+          description: Usage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmUsage"
+
+  /integrations:
+    get:
+      operationId: listIntegrations
+      tags: [integrations]
+      summary: List platform integrations
+      responses:
+        "200":
+          description: Integrations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationList"
+
+  /github/change-plans:
+    get:
+      operationId: listChangePlans
+      tags: [github]
+      summary: List GitHub change plans
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Change plans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangePlanList"
+    post:
+      operationId: createChangePlan
+      tags: [github]
+      summary: Create a change plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChangePlanBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangePlan"
+
+  /github/change-plans/{id}:
+    get:
+      operationId: getChangePlan
+      tags: [github]
+      summary: Get change plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Change plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangePlan"
+
+  /artifacts:
+    get:
+      operationId: listArtifactsStore
+      tags: [artifacts]
+      summary: List stored artifacts
+      parameters:
+        - name: taskId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Artifact list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactStoreList"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get system settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update system settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  /overview/summary:
+    get:
+      operationId: getOverviewSummary
+      tags: [tasks]
+      summary: Get platform overview summary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OverviewSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +577,792 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, paused, awaiting_approval]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        adapter:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        runCount:
+          type: integer
+        lastRunAt:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        idempotencyKey:
+          type: string
+        writeSafe:
+          type: boolean
+      required: [id, name, status, priority, createdAt, updatedAt]
+
+    TaskList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        total:
+          type: integer
+      required: [items, total]
+
+    CreateTaskBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        adapter:
+          type: string
+        priority:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        idempotencyKey:
+          type: string
+        writeSafe:
+          type: boolean
+      required: [name]
+
+    UpdateTaskBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+
+    Run:
+      type: object
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        taskName:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, retrying, stale]
+        startedAt:
+          type: string
+        completedAt:
+          type: string
+        durationMs:
+          type: integer
+        retryCount:
+          type: integer
+        maxRetries:
+          type: integer
+        error:
+          type: string
+        output:
+          type: string
+        adapter:
+          type: string
+        llmModel:
+          type: string
+        tokenCount:
+          type: integer
+        idempotencyKey:
+          type: string
+        isStale:
+          type: boolean
+      required: [id, taskId, status, startedAt]
+
+    RunList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Run"
+        total:
+          type: integer
+      required: [items, total]
+
+    Command:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [read, write, delete, external_call, webhook]
+        status:
+          type: string
+          enum: [pending, executing, completed, failed, awaiting_approval, cancelled]
+        isHighRisk:
+          type: boolean
+        requiresApproval:
+          type: boolean
+        idempotencyKey:
+          type: string
+        writeSafe:
+          type: boolean
+        groupId:
+          type: string
+        adapter:
+          type: string
+        createdAt:
+          type: string
+        executedAt:
+          type: string
+        payload:
+          type: object
+        result:
+          type: object
+      required: [id, name, type, status, createdAt]
+
+    CommandList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Command"
+        total:
+          type: integer
+      required: [items, total]
+
+    CreateCommandBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        adapter:
+          type: string
+        isHighRisk:
+          type: boolean
+        requiresApproval:
+          type: boolean
+        idempotencyKey:
+          type: string
+        payload:
+          type: object
+      required: [name, type]
+
+    CommandGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, partial]
+        commandCount:
+          type: integer
+        completedCount:
+          type: integer
+        failedCount:
+          type: integer
+        createdAt:
+          type: string
+        commands:
+          type: array
+          items:
+            $ref: "#/components/schemas/Command"
+      required: [id, name, status, commandCount, createdAt]
+
+    CommandGroupList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommandGroup"
+        total:
+          type: integer
+      required: [items, total]
+
+    CreateCommandGroupBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required: [name]
+
+    Approval:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired]
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        requestedBy:
+          type: string
+        requestedAt:
+          type: string
+        expiresAt:
+          type: string
+        decidedAt:
+          type: string
+        decidedBy:
+          type: string
+        reason:
+          type: string
+        commandId:
+          type: string
+        taskId:
+          type: string
+        adapter:
+          type: string
+        payload:
+          type: object
+      required: [id, title, status, riskLevel, requestedAt]
+
+    ApprovalList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Approval"
+        total:
+          type: integer
+        pendingCount:
+          type: integer
+      required: [items, total, pendingCount]
+
+    ApprovalDecisionBody:
+      type: object
+      properties:
+        reason:
+          type: string
+        decidedBy:
+          type: string
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        level:
+          type: string
+          enum: [info, warning, error, success]
+        message:
+          type: string
+        taskId:
+          type: string
+        taskName:
+          type: string
+        runId:
+          type: string
+        commandId:
+          type: string
+        adapter:
+          type: string
+        timestamp:
+          type: string
+        metadata:
+          type: object
+      required: [id, type, level, message, timestamp]
+
+    EventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        total:
+          type: integer
+      required: [items, total]
+
+    AdapterHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        latencyMs:
+          type: integer
+        lastChecked:
+          type: string
+        message:
+          type: string
+      required: [status, lastChecked]
+
+    Adapter:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [email, calendar, files, github, slack, notion, web, custom]
+        status:
+          type: string
+          enum: [connected, disconnected, degraded, error]
+        health:
+          $ref: "#/components/schemas/AdapterHealth"
+        permissions:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        lastActivity:
+          type: string
+        commandCount:
+          type: integer
+        errorRate:
+          type: number
+        description:
+          type: string
+        requiresCredentials:
+          type: boolean
+        credentialsConfigured:
+          type: boolean
+      required: [id, name, type, status]
+
+    AdapterList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Adapter"
+        total:
+          type: integer
+        healthyCount:
+          type: integer
+        degradedCount:
+          type: integer
+        unhealthyCount:
+          type: integer
+      required: [items, total, healthyCount, degradedCount, unhealthyCount]
+
+    LlmModel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+        contextWindow:
+          type: integer
+        isDefault:
+          type: boolean
+        status:
+          type: string
+          enum: [available, unavailable, rate_limited]
+        costPer1kTokens:
+          type: number
+        avgLatencyMs:
+          type: integer
+        capabilities:
+          type: array
+          items:
+            type: string
+      required: [id, name, provider, status]
+
+    LlmModelList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LlmModel"
+        total:
+          type: integer
+      required: [items, total]
+
+    LlmRoute:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        condition:
+          type: string
+        targetModelId:
+          type: string
+        targetModelName:
+          type: string
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+        matchCount:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, name, condition, targetModelId, enabled, createdAt]
+
+    LlmRouteList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LlmRoute"
+        total:
+          type: integer
+      required: [items, total]
+
+    CreateLlmRouteBody:
+      type: object
+      properties:
+        name:
+          type: string
+        condition:
+          type: string
+        targetModelId:
+          type: string
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+      required: [name, condition, targetModelId]
+
+    LlmUsage:
+      type: object
+      properties:
+        totalTokens:
+          type: integer
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        totalRequests:
+          type: integer
+        avgLatencyMs:
+          type: integer
+        byModel:
+          type: array
+          items:
+            type: object
+            properties:
+              modelId:
+                type: string
+              modelName:
+                type: string
+              tokens:
+                type: integer
+              requests:
+                type: integer
+              cost:
+                type: number
+            required: [modelId, modelName, tokens, requests]
+        last24hTokens:
+          type: integer
+        last7dTokens:
+          type: integer
+      required: [totalTokens, totalRequests, byModel]
+
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [productivity, communication, developer, storage, calendar, ai, custom]
+        status:
+          type: string
+          enum: [connected, disconnected, error, pending]
+        description:
+          type: string
+        iconUrl:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        lastSync:
+          type: string
+        webhookUrl:
+          type: string
+        isBuiltin:
+          type: boolean
+      required: [id, name, category, status]
+
+    IntegrationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Integration"
+        total:
+          type: integer
+        connectedCount:
+          type: integer
+      required: [items, total, connectedCount]
+
+    ChangePlan:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending_review, approved, rejected, applied, failed]
+        repository:
+          type: string
+        branch:
+          type: string
+        prUrl:
+          type: string
+        prNumber:
+          type: integer
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        filesChanged:
+          type: integer
+        additions:
+          type: integer
+        deletions:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        reviewers:
+          type: array
+          items:
+            type: string
+        diff:
+          type: string
+        taskId:
+          type: string
+      required: [id, title, status, riskLevel, createdAt, updatedAt]
+
+    ChangePlanList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangePlan"
+        total:
+          type: integer
+      required: [items, total]
+
+    CreateChangePlanBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        repository:
+          type: string
+        branch:
+          type: string
+        taskId:
+          type: string
+        riskLevel:
+          type: string
+      required: [title, repository]
+
+    ArtifactStore:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [text, json, markdown, code, image, binary, csv]
+        size:
+          type: integer
+        taskId:
+          type: string
+        taskName:
+          type: string
+        runId:
+          type: string
+        createdAt:
+          type: string
+        mimeType:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        previewUrl:
+          type: string
+      required: [id, name, type, createdAt]
+
+    ArtifactStoreList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArtifactStore"
+        total:
+          type: integer
+      required: [items, total]
+
+    Settings:
+      type: object
+      properties:
+        systemName:
+          type: string
+        defaultLlmModelId:
+          type: string
+        requireApprovalForHighRisk:
+          type: boolean
+        approvalTimeoutMinutes:
+          type: integer
+        maxConcurrentTasks:
+          type: integer
+        maxRetries:
+          type: integer
+        retryDelayMs:
+          type: integer
+        stalenessThresholdMs:
+          type: integer
+        logLevel:
+          type: string
+          enum: [debug, info, warning, error]
+        enableEventStreaming:
+          type: boolean
+        webhookUrl:
+          type: string
+        enableIdempotency:
+          type: boolean
+        version:
+          type: string
+      required: [systemName, requireApprovalForHighRisk, logLevel]
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        systemName:
+          type: string
+        defaultLlmModelId:
+          type: string
+        requireApprovalForHighRisk:
+          type: boolean
+        approvalTimeoutMinutes:
+          type: integer
+        maxConcurrentTasks:
+          type: integer
+        maxRetries:
+          type: integer
+        logLevel:
+          type: string
+        enableEventStreaming:
+          type: boolean
+        webhookUrl:
+          type: string
+        enableIdempotency:
+          type: boolean
+
+    OverviewSummary:
+      type: object
+      properties:
+        activeTasks:
+          type: integer
+        completedToday:
+          type: integer
+        failedToday:
+          type: integer
+        pendingApprovals:
+          type: integer
+        adaptersHealthy:
+          type: integer
+        adaptersDegraded:
+          type: integer
+        adaptersTotal:
+          type: integer
+        totalRunsToday:
+          type: integer
+        avgRunDurationMs:
+          type: integer
+        tokensUsedToday:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        tasksByStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              count:
+                type: integer
+            required: [status, count]
+        runTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              hour:
+                type: string
+              count:
+                type: integer
+              failed:
+                type: integer
+            required: [hour, count, failed]
+      required: [activeTasks, completedToday, failedToday, pendingApprovals, adaptersHealthy, adaptersDegraded, adaptersTotal, totalRunsToday, recentActivity, tasksByStatus, runTrend]
