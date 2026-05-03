@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Clock, AlertTriangle, CheckCircle, XCircle, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useListApprovals, useApproveRequest, useRejectRequest } from "@workspace/api-client-react";
 import { MOCK_APPROVALS } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, RISK_COLORS, ADAPTER_COLORS, formatRelativeTime } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 function timeLeft(expiresAt: string | undefined): string {
   if (!expiresAt) return "—";
@@ -23,8 +25,10 @@ export default function Approvals() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: raw, isError } = useListApprovals(undefined, { query: { queryKey: ["approvals"], retry: false } });
+  const { data: raw, isError } = useListApprovals(undefined, { query: { queryKey: ["approvals"], retry: false, refetchInterval: 15000 } });
   const approveReq = useApproveRequest();
   const rejectReq = useRejectRequest();
 
@@ -42,10 +46,17 @@ export default function Approvals() {
 
   function handleDecide() {
     if (!selectedId || !action) return;
+    const title = allApprovals.find((a) => a.id === selectedId)?.title ?? "Request";
     if (action === "approve") {
-      approveReq.mutate({ id: selectedId, data: { reason } });
+      approveReq.mutate({ id: selectedId, data: { reason } }, {
+        onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["approvals"] }); void queryClient.invalidateQueries({ queryKey: ["overview-summary"] }); toast({ title: "Approved", description: `"${title}" has been approved.` }); },
+        onError: () => toast({ title: "Error", description: "Failed to approve. Please try again.", variant: "destructive" }),
+      });
     } else {
-      rejectReq.mutate({ id: selectedId, data: { reason } });
+      rejectReq.mutate({ id: selectedId, data: { reason } }, {
+        onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["approvals"] }); void queryClient.invalidateQueries({ queryKey: ["overview-summary"] }); toast({ title: "Rejected", description: `"${title}" has been rejected.` }); },
+        onError: () => toast({ title: "Error", description: "Failed to reject. Please try again.", variant: "destructive" }),
+      });
     }
     setSelectedId(null);
     setReason("");

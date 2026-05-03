@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Star, ToggleLeft, ToggleRight, Cpu } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { useListLlmModels, useListLlmRoutes, useGetLlmUsage, useCreateLlmRoute } from "@workspace/api-client-react";
 import { MOCK_LLM_MODELS, MOCK_LLM_ROUTES, MOCK_LLM_USAGE } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, formatNumber } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const PROVIDER_COLORS: Record<string, string> = {
   openai: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -24,10 +26,12 @@ export default function LlmRouting() {
   const [showCreate, setShowCreate] = useState(false);
   const [newRoute, setNewRoute] = useState({ name: "", condition: "", targetModelId: "gpt-4o", priority: 10, enabled: true });
 
-  const { data: modelsRaw, isError: mErr } = useListLlmModels({ query: { queryKey: ["llm-models"], retry: false } });
-  const { data: routesRaw, isError: rErr } = useListLlmRoutes({ query: { queryKey: ["llm-routes"], retry: false } });
-  const { data: usageRaw, isError: uErr } = useGetLlmUsage({ query: { queryKey: ["llm-usage"], retry: false } });
+  const { data: modelsRaw, isError: mErr } = useListLlmModels({ query: { queryKey: ["llm-models"], retry: false, refetchInterval: 60000 } });
+  const { data: routesRaw, isError: rErr } = useListLlmRoutes({ query: { queryKey: ["llm-routes"], retry: false, refetchInterval: 60000 } });
+  const { data: usageRaw, isError: uErr } = useGetLlmUsage({ query: { queryKey: ["llm-usage"], retry: false, refetchInterval: 60000 } });
   const createRoute = useCreateLlmRoute();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const models = useMemo(() => (mErr || !modelsRaw) ? MOCK_LLM_MODELS : ((modelsRaw as unknown as { items: typeof MOCK_LLM_MODELS })?.items ?? MOCK_LLM_MODELS), [modelsRaw, mErr]);
   const routes = useMemo(() => (rErr || !routesRaw) ? MOCK_LLM_ROUTES : ((routesRaw as unknown as { items: typeof MOCK_LLM_ROUTES })?.items ?? MOCK_LLM_ROUTES), [routesRaw, rErr]);
@@ -35,7 +39,11 @@ export default function LlmRouting() {
   const isDemo = mErr || !modelsRaw;
 
   function handleCreate() {
-    createRoute.mutate({ data: { name: newRoute.name, condition: newRoute.condition, targetModelId: newRoute.targetModelId, priority: newRoute.priority, enabled: newRoute.enabled } });
+    const name = newRoute.name;
+    createRoute.mutate({ data: { name, condition: newRoute.condition, targetModelId: newRoute.targetModelId, priority: newRoute.priority, enabled: newRoute.enabled } }, {
+      onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["llm-routes"] }); toast({ title: "Route created", description: `"${name}" routing rule has been added.` }); },
+      onError: () => toast({ title: "Error", description: "Failed to create route.", variant: "destructive" }),
+    });
     setShowCreate(false);
   }
 

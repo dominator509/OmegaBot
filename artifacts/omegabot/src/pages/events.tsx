@@ -23,7 +23,7 @@ export default function Events() {
   const [autoRefresh] = useState(true);
 
   const { data: raw, isError, refetch } = useListEvents(undefined, {
-    query: { queryKey: ["events"], retry: false },
+    query: { queryKey: ["events"], retry: false, refetchInterval: 20000 },
   });
 
   const events = useMemo(() => (isError || !raw) ? MOCK_EVENTS : ((raw as unknown as { items: typeof MOCK_EVENTS })?.items ?? MOCK_EVENTS), [raw, isError]);

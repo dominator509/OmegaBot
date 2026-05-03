@@ -24,14 +24,34 @@ import {
   LayoutDashboard, 
   ListTodo, 
   Network, 
-  Settings 
+  Settings,
+  Zap,
+  AlertTriangle,
+  Moon,
+  Sun
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { useGetOverviewSummary, useGetSettings } from "@workspace/api-client-react";
+import { cn } from "@/lib/utils";
 
 export function SidebarLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
+
+  const { data: summary } = useGetOverviewSummary({
+    query: { queryKey: ["overview-summary"], retry: false, refetchInterval: 30000 },
+  });
+  const { data: settings } = useGetSettings({
+    query: { queryKey: ["settings"], retry: false, staleTime: 300000 },
+  });
+
+  const pendingApprovals = (summary as { pendingApprovals?: number } | undefined)?.pendingApprovals ?? 0;
+  const adaptersHealthy = (summary as { adaptersHealthy?: number } | undefined)?.adaptersHealthy;
+  const adaptersTotal = (summary as { adaptersTotal?: number } | undefined)?.adaptersTotal;
+  const adaptersDegraded = (summary as { adaptersDegraded?: number } | undefined)?.adaptersDegraded ?? 0;
+  const version = (settings as { version?: string } | undefined)?.version ?? "0.23.0";
+  const isHealthy = adaptersDegraded === 0;
 
   return (
     <SidebarProvider>
@@ -94,16 +114,18 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
                       <Link href="/approvals">
                         <CheckCircle className="h-4 w-4" />
                         <span>Approvals</span>
-                        <div className="ml-auto bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                          3
-                        </div>
+                        {pendingApprovals > 0 && (
+                          <div className="ml-auto bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                            {pendingApprovals}
+                          </div>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location.startsWith("/events")}>
                       <Link href="/events">
-                        <Activity className="h-4 w-4" />
+                        <Zap className="h-4 w-4" />
                         <span>Events</span>
                       </Link>
                     </SidebarMenuButton>
@@ -121,6 +143,11 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
                       <Link href="/adapters">
                         <Network className="h-4 w-4" />
                         <span>Adapters</span>
+                        {adaptersDegraded > 0 && (
+                          <div className="ml-auto">
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                          </div>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -180,19 +207,25 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
           <SidebarFooter className="p-4">
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  System Healthy
+                <span className={cn("flex items-center gap-1.5", isHealthy ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400")}>
+                  <div className={cn("w-2 h-2 rounded-full", isHealthy ? "bg-green-500" : "bg-amber-500")}></div>
+                  {isHealthy
+                    ? "System Healthy"
+                    : `${adaptersDegraded} adapter${adaptersDegraded > 1 ? "s" : ""} degraded`}
+                  {adaptersTotal !== undefined && adaptersHealthy !== undefined && (
+                    <span className="text-muted-foreground ml-0.5">({adaptersHealthy}/{adaptersTotal})</span>
+                  )}
                 </span>
-                <span>v1.0.4</span>
+                <span className="font-mono">v{version}</span>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-full text-xs h-8"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="w-full text-xs h-8 gap-2"
               >
-                Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode
+                {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                {theme === "dark" ? "Light Mode" : "Dark Mode"}
               </Button>
             </div>
           </SidebarFooter>

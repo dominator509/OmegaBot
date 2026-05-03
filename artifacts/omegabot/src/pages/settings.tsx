@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
 import { MOCK_SETTINGS, MOCK_LLM_MODELS } from "@/lib/mock-data";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Settings = typeof MOCK_SETTINGS;
 
@@ -16,6 +18,8 @@ export default function Settings() {
   const { data: rawSettings, isError } = useGetSettings({ query: { queryKey: ["settings"], retry: false } });
   const updateSettings = useUpdateSettings();
   const [saved, setSaved] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const initial = useMemo(() => (isError || !rawSettings) ? MOCK_SETTINGS : rawSettings as Settings, [rawSettings, isError]);
   const [form, setForm] = useState<Settings>(MOCK_SETTINGS);
@@ -28,9 +32,15 @@ export default function Settings() {
   }
 
   function handleSave() {
-    updateSettings.mutate({ data: form });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    updateSettings.mutate({ data: form }, {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: ["settings"] });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        toast({ title: "Settings saved", description: "Your configuration has been updated." });
+      },
+      onError: () => toast({ title: "Save failed", description: "Could not save settings. Please try again.", variant: "destructive" }),
+    });
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, ExternalLink, GitBranch, AlertTriangle, FileCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,17 @@ export default function GitHub() {
 
   const { data: raw, isError } = useListChangePlans(undefined, { query: { queryKey: ["change-plans"], retry: false } });
   const createPlan = useCreateChangePlan();
+  const queryClient = useQueryClient();
 
   const plans = useMemo(() => (isError || !raw) ? MOCK_CHANGE_PLANS : ((raw as unknown as { items: typeof MOCK_CHANGE_PLANS })?.items ?? MOCK_CHANGE_PLANS), [raw, isError]);
   const isDemo = isError || !raw;
   const selectedPlan = plans.find((p) => p.id === selected);
 
   function handleCreate() {
-    createPlan.mutate({ data: { title: newPlan.title, description: newPlan.description, repository: newPlan.repository, riskLevel: newPlan.riskLevel as "low" | "medium" | "high" | "critical" } });
+    createPlan.mutate(
+      { data: { title: newPlan.title, description: newPlan.description, repository: newPlan.repository, riskLevel: newPlan.riskLevel as "low" | "medium" | "high" | "critical" } },
+      { onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["change-plans"] }) }
+    );
     setShowCreate(false);
   }
 

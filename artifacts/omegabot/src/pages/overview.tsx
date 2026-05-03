@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useGetOverviewSummary } from "@workspace/api-client-react";
 import { MOCK_OVERVIEW } from "@/lib/mock-data";
-import { STATUS_COLORS, LEVEL_COLORS, formatRelativeTime } from "@/lib/utils";
+import { STATUS_COLORS, LEVEL_COLORS, formatRelativeTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const PIE_COLORS: Record<string, string> = {
@@ -15,7 +15,7 @@ const PIE_COLORS: Record<string, string> = {
 
 export default function Overview() {
   const { data: raw, isError, isLoading } = useGetOverviewSummary({
-    query: { queryKey: ["overview-summary"], retry: false },
+    query: { queryKey: ["overview-summary"], retry: false, refetchInterval: 30000 },
   });
 
   const data = useMemo(() => raw ?? MOCK_OVERVIEW, [raw]);
@@ -38,7 +38,7 @@ export default function Overview() {
     { label: "Adapters healthy", value: `${data.adaptersHealthy}/${data.adaptersTotal}`, icon: Network, color: "text-teal-500" },
     { label: "Runs today", value: data.totalRunsToday, icon: RefreshCw, color: "text-violet-500" },
     { label: "Tokens today", value: data.tokensUsedToday?.toLocaleString(), icon: Cpu, color: "text-pink-500" },
-    { label: "Avg run duration", value: data.avgRunDurationMs ? `${Math.round(data.avgRunDurationMs / 1000)}s` : "—", icon: Clock, color: "text-indigo-500" },
+    { label: "Avg run duration", value: formatDuration(data.avgRunDurationMs), icon: Clock, color: "text-indigo-500" },
   ];
 
   return (

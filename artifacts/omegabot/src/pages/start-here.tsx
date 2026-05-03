@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useGetOverviewSummary } from "@workspace/api-client-react";
+import { useGetOverviewSummary, useGetSettings } from "@workspace/api-client-react";
 import { MOCK_SETTINGS } from "@/lib/mock-data";
 
 const concepts = [
@@ -25,10 +25,13 @@ const principles = [
 
 export default function StartHere() {
   const { data: overview } = useGetOverviewSummary({
-    query: { queryKey: ["overview-summary"], retry: false },
+    query: { queryKey: ["overview-summary"], retry: false, refetchInterval: 60000 },
+  });
+  const { data: settings } = useGetSettings({
+    query: { queryKey: ["settings"], retry: false, staleTime: 300000 },
   });
 
-  const version = MOCK_SETTINGS.version;
+  const version = (settings as { version?: string } | undefined)?.version ?? MOCK_SETTINGS.version;
 
   return (
     <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">

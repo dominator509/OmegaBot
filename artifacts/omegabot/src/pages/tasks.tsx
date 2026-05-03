@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Shield, Key, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useListTasks, useListRuns, useCreateTask } from "@workspace/api-client-react";
 import { MOCK_TASKS, MOCK_RUNS } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, PRIORITY_COLORS, ADAPTER_COLORS, formatRelativeTime, formatDuration, truncate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Tasks() {
   const [search, setSearch] = useState("");
@@ -18,10 +20,12 @@ export default function Tasks() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTask, setNewTask] = useState({ name: "", description: "", priority: "medium", adapter: "gmail" });
 
-  const { data: tasksData, isError: tasksError } = useListTasks(undefined, { query: { queryKey: ["tasks"], retry: false } });
-  const { data: runsData, isError: runsError } = useListRuns(undefined, { query: { queryKey: ["runs"], retry: false } });
+  const { data: tasksData, isError: tasksError } = useListTasks(undefined, { query: { queryKey: ["tasks"], retry: false, refetchInterval: 30000 } });
+  const { data: runsData, isError: runsError } = useListRuns(undefined, { query: { queryKey: ["runs"], retry: false, refetchInterval: 30000 } });
   const { data: taskRunsData } = useListRuns(undefined, { query: { queryKey: ["runs-for-task", expandedTask], retry: false, enabled: !!expandedTask } });
   const createTask = useCreateTask();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const tasks = useMemo(() => (tasksError || !tasksData) ? MOCK_TASKS : ((tasksData as unknown as { items: typeof MOCK_TASKS })?.items ?? MOCK_TASKS), [tasksData, tasksError]);
   const allRuns = useMemo(() => (runsError || !runsData) ? MOCK_RUNS : ((runsData as unknown as { items: typeof MOCK_RUNS })?.items ?? MOCK_RUNS), [runsData, runsError]);
@@ -38,7 +42,14 @@ export default function Tasks() {
   const getTaskRuns = (taskId: string) => allRuns.filter((r) => r.taskId === taskId);
 
   function handleCreate() {
-    createTask.mutate({ data: { name: newTask.name, description: newTask.description, priority: newTask.priority as "low" | "medium" | "high" | "critical", adapter: newTask.adapter } });
+    const name = newTask.name;
+    createTask.mutate(
+      { data: { name, description: newTask.description, priority: newTask.priority as "low" | "medium" | "high" | "critical", adapter: newTask.adapter } },
+      {
+        onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["tasks"] }); void queryClient.invalidateQueries({ queryKey: ["overview-summary"] }); toast({ title: "Task created", description: `"${name}" has been added.` }); },
+        onError: () => toast({ title: "Error", description: "Failed to create task.", variant: "destructive" }),
+      }
+    );
     setShowCreate(false);
     setNewTask({ name: "", description: "", priority: "medium", adapter: "gmail" });
   }

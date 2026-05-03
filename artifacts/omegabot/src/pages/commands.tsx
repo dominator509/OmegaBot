@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Shield, Key, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useListCommands, useListCommandGroups, useCreateCommand } from "@workspace/api-client-react";
 import { MOCK_COMMANDS, MOCK_GROUPS } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, ADAPTER_COLORS, formatRelativeTime, truncate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const TYPE_COLORS: Record<string, string> = {
   read: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
@@ -24,24 +26,30 @@ export default function Commands() {
   const [showCreate, setShowCreate] = useState(false);
   const [newCmd, setNewCmd] = useState({ name: "", description: "", type: "read", adapter: "gmail", isHighRisk: false, requiresApproval: false });
 
-  const { data: cmdsData, isError: cmdsError } = useListCommands({ query: { queryKey: ["commands"], retry: false } });
-  const { data: grpsData, isError: grpsError } = useListCommandGroups({ query: { queryKey: ["command-groups"], retry: false } });
+  const { data: cmdsData, isError: cmdsError } = useListCommands({ query: { queryKey: ["commands"], retry: false, refetchInterval: 30000 } });
+  const { data: grpsData, isError: grpsError } = useListCommandGroups({ query: { queryKey: ["command-groups"], retry: false, refetchInterval: 30000 } });
   const createCommand = useCreateCommand();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const commands = useMemo(() => (cmdsError || !cmdsData) ? MOCK_COMMANDS : ((cmdsData as unknown as { items: typeof MOCK_COMMANDS })?.items ?? MOCK_COMMANDS), [cmdsData, cmdsError]);
   const groups = useMemo(() => (grpsError || !grpsData) ? MOCK_GROUPS : ((grpsData as unknown as { items: typeof MOCK_GROUPS })?.items ?? MOCK_GROUPS), [grpsData, grpsError]);
   const isDemo = cmdsError || !cmdsData;
 
   function handleCreate() {
+    const name = newCmd.name;
     createCommand.mutate({
       data: {
-        name: newCmd.name,
+        name,
         description: newCmd.description,
         type: newCmd.type as "read" | "write" | "delete" | "external_call" | "webhook",
         adapter: newCmd.adapter,
         isHighRisk: newCmd.isHighRisk,
         requiresApproval: newCmd.requiresApproval,
       },
+    }, {
+      onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["commands"] }); void queryClient.invalidateQueries({ queryKey: ["command-groups"] }); toast({ title: "Command created", description: `"${name}" has been added.` }); },
+      onError: () => toast({ title: "Error", description: "Failed to create command.", variant: "destructive" }),
     });
     setShowCreate(false);
   }

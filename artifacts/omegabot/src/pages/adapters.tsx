@@ -26,7 +26,7 @@ const HEALTH_COLORS = {
 export default function Adapters() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: raw, isError } = useListAdapters({ query: { queryKey: ["adapters"], retry: false } });
+  const { data: raw, isError } = useListAdapters({ query: { queryKey: ["adapters"], retry: false, refetchInterval: 30000 } });
   const adapters = useMemo(() => (isError || !raw) ? MOCK_ADAPTERS : ((raw as unknown as { items: typeof MOCK_ADAPTERS })?.items ?? MOCK_ADAPTERS), [raw, isError]);
   const isDemo = isError || !raw;
 
