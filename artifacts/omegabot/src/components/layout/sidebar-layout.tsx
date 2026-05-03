@@ -29,7 +29,8 @@ import {
   AlertTriangle,
   Moon,
   Sun,
-  MessageSquare
+  MessageSquare,
+  BrainCircuit
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -157,6 +158,14 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
                             <AlertTriangle className="h-3 w-3 text-amber-500" />
                           </div>
                         )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/providers")}>
+                      <Link href="/providers">
+                        <BrainCircuit className="h-4 w-4" />
+                        <span>AI Providers</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

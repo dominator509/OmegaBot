@@ -14,6 +14,7 @@ import controlRouter from "./control";
 import artifactsStoreRouter from "./artifacts-store";
 import settingsRouter from "./settings";
 import overviewRouter from "./overview";
+import providersRouter from "./providers";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(controlRouter);
 router.use(artifactsStoreRouter);
 router.use(settingsRouter);
 router.use(overviewRouter);
+router.use(providersRouter);
 
 export default router;

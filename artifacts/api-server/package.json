@@ -10,19 +10,21 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
     "@types/express-rate-limit": "^6.0.2",
     "@workspace/api-zod": "workspace:*",
-    "@workspace/integrations-openai-ai-server": "workspace:*",
-    "zod": "catalog:",
     "@workspace/db": "workspace:*",
+    "@workspace/integrations-openai-ai-server": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
     "express-rate-limit": "^8.4.1",
     "helmet": "^8.1.0",
+    "openai": "^6.35.0",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

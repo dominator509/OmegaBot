@@ -24,7 +24,7 @@ pnpm workspace monorepo using TypeScript. OmegaBot — a full operator-facing da
 | API Server | `artifacts/api-server` | `/api` | `$PORT` (8080) |
 | OmegaBot Web | `artifacts/omegabot` | `/` | `$PORT` (25662) |
 
-## Pages (12 screens)
+## Pages (13 screens)
 
 | Route | Component | Description |
 |---|---|---|
@@ -35,11 +35,33 @@ pnpm workspace monorepo using TypeScript. OmegaBot — a full operator-facing da
 | `/approvals` | `approvals.tsx` | Tabbed view (pending/approved/rejected/expired), approve/reject dialogs |
 | `/events` | `events.tsx` | Timeline with level icons, metadata drill-down, adapter/level filters |
 | `/adapters` | `adapters.tsx` | Adapter health card grid, click-to-detail dialog |
-| `/llm` | `llm.tsx` | Models table, route priority list, usage bar chart + cost table |
+| `/providers` | `providers.tsx` | AI provider management (API key, base URL, model list, enable/disable, test) |
+| `/llm` | `llm.tsx` | Models table (from provider registry), route priority list, usage bar chart |
 | `/integrations` | `integrations.tsx` | Integration cards grouped by category, connect/configure actions |
 | `/github` | `github.tsx` | Change plan list + master-detail diff viewer |
 | `/artifacts` | `artifacts-page.tsx` | Artifact file table, inline text/JSON/markdown preview panel |
 | `/settings` | `settings.tsx` | General, LLM, Approvals, Runtime, Features settings with save |
+
+## AI Provider Registry
+
+Located at `artifacts/api-server/src/lib/provider-registry.ts`. In-memory singleton. Pre-seeded with all 7 providers.
+
+Supported providers:
+| ID | Name | Type | Default Base URL |
+|---|---|---|---|
+| `openai` | OpenAI | `openai-compat` | `https://api.openai.com/v1` |
+| `anthropic` | Anthropic | `anthropic` | `https://api.anthropic.com` |
+| `gemini` | Google Gemini | `openai-compat` | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| `venice` | Venice AI | `openai-compat` | `https://api.venice.ai/api/v1` |
+| `deepseek` | DeepSeek | `openai-compat` | `https://api.deepseek.com/v1` |
+| `grok` | Grok (xAI) | `openai-compat` | `https://api.x.ai/v1` |
+| `ollama` | Ollama (Local) | `openai-compat` | `http://localhost:11434/v1` |
+
+- All `openai-compat` providers use the `openai` SDK with a custom `baseURL` and `apiKey`.
+- `anthropic` type uses `@anthropic-ai/sdk` with streaming via `messages.create`.
+- API keys are never returned in GET responses (masked). A new key replaces the stored one on PATCH.
+- The `/api/chat` endpoint routes by `providerId` + `model` fields, or auto-detects provider by `model` ID.
+- The `/api/llm/models` endpoint serves models from all enabled providers.
 
 ## API Routes
 
@@ -50,7 +72,9 @@ All routes under `/api/` are in-memory (no DB), served by `artifacts/api-server/
 - `GET /api/approvals` · `POST /api/approvals/:id/approve|reject`
 - `GET /api/events`
 - `GET /api/adapters`
-- `GET /api/llm/models` · `GET/POST /api/llm/routes` · `GET /api/llm/usage`
+- `GET /api/providers` · `GET/PATCH /api/providers/:id` · `DELETE /api/providers/:id`
+- `POST /api/providers/:id/test` · `POST /api/providers/:id/models` · `DELETE /api/providers/:id/models/:modelId`
+- `GET /api/llm/models` · `GET/POST /api/llm/routes` · `PATCH/DELETE /api/llm/routes/:id` · `GET /api/llm/usage`
 - `GET /api/integrations`
 - `GET/POST /api/github/change-plans`
 - `GET /api/artifacts`

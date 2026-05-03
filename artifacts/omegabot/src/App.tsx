@@ -16,6 +16,7 @@ import Events from "@/pages/events";
 import Adapters from "@/pages/adapters";
 import LlmRouting from "@/pages/llm";
 import Integrations from "@/pages/integrations";
+import Providers from "@/pages/providers";
 import GitHub from "@/pages/github";
 import ArtifactsPage from "@/pages/artifacts-page";
 import Settings from "@/pages/settings";
@@ -48,6 +49,7 @@ function Router() {
           <Route path="/adapters*" component={Adapters} />
           <Route path="/llm" component={LlmRouting} />
           <Route path="/integrations" component={Integrations} />
+          <Route path="/providers" component={Providers} />
           <Route path="/github*" component={GitHub} />
           <Route path="/artifacts" component={ArtifactsPage} />
           <Route path="/settings" component={Settings} />

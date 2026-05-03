@@ -1,6 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import OpenAI from "openai";
+import { providerRegistry } from "../lib/provider-registry.js";
+
+const defaultOpenAI = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "",
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+});
 
 const router = Router();
 
@@ -12,6 +18,8 @@ const ChatMessage = z.object({
 const ChatRequest = z.object({
   messages: z.array(ChatMessage).min(1),
   conversationId: z.string().optional(),
+  model: z.string().optional(),
+  providerId: z.string().optional(),
 });
 
 const SYSTEM_PROMPT = `You are OmegaBot, an intelligent personal AI assistant and operator console. You help operators manage tasks, runs, approvals, adapters, LLM routing, and integrations on the OmegaBot platform.
@@ -23,9 +31,62 @@ You have deep knowledge of:
 - Approvals: human-in-the-loop gates for risky or high-impact actions
 - Adapters: pluggable connectors to external services (Gmail, GitHub, Slack, Notion, etc.)
 - LLM Routing: directing model calls based on task priority, adapter, risk level
+- AI Providers: OpenAI, Anthropic, Google Gemini, Venice AI, DeepSeek, Grok, and Ollama
 - Events: system event log for auditing and debugging
 
 When helping operators, be concise, direct, and practical. Suggest dashboard actions when relevant (e.g. "Go to Approvals to review"). You are the AI brain of the platform.`;
+
+async function streamOpenAICompat(
+  client: ReturnType<typeof providerRegistry.createOpenAIClient>,
+  model: string,
+  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+  res: Response
+): Promise<string> {
+  let fullContent = "";
+  const stream = await client.chat.completions.create({
+    model,
+    max_completion_tokens: 2048,
+    messages,
+    stream: true,
+  });
+  for await (const chunk of stream) {
+    const content = chunk.choices[0]?.delta?.content;
+    if (content) {
+      fullContent += content;
+      res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    }
+  }
+  return fullContent;
+}
+
+async function streamAnthropic(
+  client: ReturnType<typeof providerRegistry.createAnthropicClient>,
+  model: string,
+  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+  res: Response
+): Promise<string> {
+  const systemMsg = messages.find((m) => m.role === "system")?.content ?? "";
+  const userMsgs = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+  let fullContent = "";
+  const stream = await client.messages.create({
+    model,
+    max_tokens: 2048,
+    system: systemMsg,
+    messages: userMsgs,
+    stream: true,
+  });
+  for await (const event of stream) {
+    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+      const content = event.delta.text;
+      fullContent += content;
+      res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    }
+  }
+  return fullContent;
+}
 
 router.post("/chat", async (req: Request, res: Response) => {
   const parsed = ChatRequest.safeParse(req.body);
@@ -34,11 +95,11 @@ router.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  const { messages } = parsed.data;
+  const { messages, model: requestedModel, providerId: requestedProviderId } = parsed.data;
 
   const chatMessages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
-    ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+    ...messages.map((m) => ({ role: m.role as "user" | "assistant" | "system", content: m.content })),
   ];
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -46,22 +107,38 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  let fullContent = "";
-
   try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-5.1",
-      max_completion_tokens: 2048,
-      messages: chatMessages,
-      stream: true,
-    });
+    let fullContent = "";
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        fullContent += content;
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    if (requestedModel && requestedProviderId) {
+      const provider = providerRegistry.getById(requestedProviderId);
+      if (!provider || !provider.enabled) {
+        res.write(`data: ${JSON.stringify({ error: `Provider '${requestedProviderId}' is not configured or enabled` })}\n\n`);
+        res.end();
+        return;
       }
+      if (provider.type === "anthropic") {
+        const client = providerRegistry.createAnthropicClient(provider);
+        fullContent = await streamAnthropic(client, requestedModel, chatMessages, res);
+      } else {
+        const client = providerRegistry.createOpenAIClient(provider);
+        fullContent = await streamOpenAICompat(client, requestedModel, chatMessages, res);
+      }
+    } else if (requestedModel) {
+      const provider = providerRegistry.getProviderForModel(requestedModel);
+      if (provider) {
+        if (provider.type === "anthropic") {
+          const client = providerRegistry.createAnthropicClient(provider);
+          fullContent = await streamAnthropic(client, requestedModel, chatMessages, res);
+        } else {
+          const client = providerRegistry.createOpenAIClient(provider);
+          fullContent = await streamOpenAICompat(client, requestedModel, chatMessages, res);
+        }
+      } else {
+        fullContent = await streamOpenAICompat(defaultOpenAI, requestedModel, chatMessages, res);
+      }
+    } else {
+      fullContent = await streamOpenAICompat(defaultOpenAI, "gpt-4.1", chatMessages, res);
     }
 
     const assistantMessage = { role: "assistant", content: fullContent };
