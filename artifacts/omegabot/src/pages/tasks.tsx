@@ -23,7 +23,6 @@ export default function Tasks() {
 
   const { data: tasksData, isError: tasksError, isLoading: tasksLoading } = useListTasks(undefined, { query: { queryKey: ["tasks"], retry: false, refetchInterval: 30000 } });
   const { data: runsData, isError: runsError } = useListRuns(undefined, { query: { queryKey: ["runs"], retry: false, refetchInterval: 30000 } });
-  const { data: taskRunsData } = useListRuns(undefined, { query: { queryKey: ["runs-for-task", expandedTask], retry: false, enabled: !!expandedTask } });
   const createTask = useCreateTask();
   const { toast } = useToast();
   const queryClient = useQueryClient();

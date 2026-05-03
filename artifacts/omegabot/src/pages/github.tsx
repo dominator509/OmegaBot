@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useListChangePlans, useCreateChangePlan } from "@workspace/api-client-react";
 import { MOCK_CHANGE_PLANS } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, RISK_COLORS, formatRelativeTime } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GitHub() {
   const [selected, setSelected] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export default function GitHub() {
   const { data: raw, isError } = useListChangePlans(undefined, { query: { queryKey: ["change-plans"], retry: false } });
   const createPlan = useCreateChangePlan();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const plans = useMemo(() => (isError || !raw) ? MOCK_CHANGE_PLANS : ((raw as unknown as { items: typeof MOCK_CHANGE_PLANS })?.items ?? MOCK_CHANGE_PLANS), [raw, isError]);
   const isDemo = isError || !raw;
@@ -137,8 +139,8 @@ export default function GitHub() {
               )}
               {selectedPlan.status === "pending_review" && (
                 <div className="flex gap-2">
-                  <Button size="sm" className="gap-1.5">Approve Plan</Button>
-                  <Button size="sm" variant="destructive" className="gap-1.5">
+                  <Button size="sm" className="gap-1.5" onClick={() => toast({ title: "Plan approved", description: `"${selectedPlan.title}" has been approved for merging.` })}>Approve Plan</Button>
+                  <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => toast({ title: "Plan rejected", description: `"${selectedPlan.title}" has been rejected.`, variant: "destructive" })}>
                     <AlertTriangle className="h-3.5 w-3.5" /> Reject Plan
                   </Button>
                 </div>

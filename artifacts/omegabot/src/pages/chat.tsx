@@ -152,7 +152,7 @@ export default function Chat() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">OmegaBot Chat</h1>
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">gpt-5.1</span>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{((settings as unknown as Record<string, unknown>)?.defaultLlmModelId as string) ?? "gpt-4o"}</span>
           {autopilotEnabled && <span className="text-xs text-amber-700 bg-amber-500/15 px-2 py-0.5 rounded-full flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> autopilot</span>}
         </div>
         <Button variant="ghost" size="sm" onClick={clearChat} className="gap-1.5 text-xs text-muted-foreground">

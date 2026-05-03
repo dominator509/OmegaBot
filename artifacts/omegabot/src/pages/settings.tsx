@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import { useGetSettings, useUpdateSettings, useListLlmModels } from "@workspace/api-client-react";
 import { MOCK_SETTINGS, MOCK_LLM_MODELS } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,12 +19,17 @@ type Settings = typeof MOCK_SETTINGS & {
 
 export default function Settings() {
   const { data: rawSettings, isError } = useGetSettings({ query: { queryKey: ["settings"], retry: false } });
+  const { data: rawModels, isError: modelsError } = useListLlmModels({ query: { queryKey: ["llm-models"], retry: false, staleTime: 60000 } });
   const updateSettings = useUpdateSettings();
   const [saved, setSaved] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const initial = useMemo(() => (isError || !rawSettings) ? MOCK_SETTINGS : rawSettings as Settings, [rawSettings, isError]);
+  const liveModels = useMemo(
+    () => (modelsError || !rawModels) ? MOCK_LLM_MODELS : ((rawModels as unknown as { items: typeof MOCK_LLM_MODELS })?.items ?? MOCK_LLM_MODELS),
+    [rawModels, modelsError]
+  );
   const [form, setForm] = useState<Settings>(MOCK_SETTINGS);
   const isDemo = isError || !rawSettings;
   const autopilotEnabled = Boolean(form.autopilotEnabled && form.autopilotRiskAccepted);
@@ -136,7 +141,7 @@ export default function Settings() {
               <Select value={form.defaultLlmModelId} onValueChange={(v) => set("defaultLlmModelId", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {MOCK_LLM_MODELS.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.provider}</SelectItem>)}
+                  {liveModels.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.provider}</SelectItem>)}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">Used when no routing rule matches</p>
