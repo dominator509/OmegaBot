@@ -23,9 +23,13 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : undefined;
 
+if (isProduction && !allowedOrigins) {
+  logger.warn("ALLOWED_ORIGINS is not set — CORS is open to all origins in production. Set ALLOWED_ORIGINS to restrict access.");
+}
+
 app.use(
   cors({
-    origin: allowedOrigins ?? true,
+    origin: allowedOrigins ?? (isProduction ? false : true),
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

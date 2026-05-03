@@ -54,8 +54,13 @@ router.get("/providers/:id", (req, res) => {
     res.status(404).json({ error: "Provider not found" });
     return;
   }
-  const { apiKey, ...rest } = provider;
-  res.json({ ...rest, apiKey: apiKey ? "••••••••" + apiKey.slice(-4) : "", hasApiKey: Boolean(apiKey) });
+  const items = providerRegistry.list();
+  const public_ = items.find((p) => p.id === req.params.id);
+  if (!public_) {
+    res.status(404).json({ error: "Provider not found" });
+    return;
+  }
+  res.json(public_);
 });
 
 router.put("/providers/:id", (req, res) => {

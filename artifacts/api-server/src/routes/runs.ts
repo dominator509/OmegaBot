@@ -113,7 +113,7 @@ router.get("/runs", (req, res) => {
   if (status && typeof status === "string") {
     runs = runs.filter((r) => r.status === status);
   }
-  const lim = Number(limit) || 50;
+  const lim = Math.min(Math.max(Number(limit) || 50, 1), 500);
   res.json({ items: runs.slice(0, lim), total: RUNS.length });
 });
 

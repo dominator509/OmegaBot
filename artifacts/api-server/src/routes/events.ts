@@ -173,7 +173,7 @@ router.get("/events", (req, res) => {
   if (level && typeof level === "string") {
     items = items.filter((e) => e.level === level);
   }
-  const lim = Number(limit) || 100;
+  const lim = Math.min(Math.max(Number(limit) || 100, 1), 1000);
   items.sort((a, b) => new Date(b.timestamp as string).getTime() - new Date(a.timestamp as string).getTime());
   res.json({ items: items.slice(0, lim), total: EVENTS.length });
 });

@@ -16,10 +16,10 @@ const ChatMessage = z.object({
 });
 
 const ChatRequest = z.object({
-  messages: z.array(ChatMessage).min(1),
-  conversationId: z.string().optional(),
-  model: z.string().optional(),
-  providerId: z.string().optional(),
+  messages: z.array(ChatMessage).min(1).max(100),
+  conversationId: z.string().max(128).optional(),
+  model: z.string().max(128).optional(),
+  providerId: z.string().max(64).optional(),
 });
 
 const SYSTEM_PROMPT = `You are OmegaBot, an intelligent personal AI assistant and operator console. You help operators manage tasks, runs, approvals, adapters, LLM routing, and integrations on the OmegaBot platform.

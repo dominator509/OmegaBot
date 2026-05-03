@@ -1,6 +1,15 @@
 import { Router } from "express";
+import { z } from "zod";
 import { CreateLlmRouteBody } from "@workspace/api-zod";
 import { providerRegistry } from "../lib/provider-registry.js";
+
+const PatchLlmRouteBody = z.object({
+  name: z.string().min(1).max(256).optional(),
+  condition: z.string().min(1).max(1024).optional(),
+  targetModelId: z.string().min(1).max(128).optional(),
+  priority: z.number().int().positive().optional(),
+  enabled: z.boolean().optional(),
+});
 
 const router = Router();
 
@@ -143,7 +152,12 @@ router.patch("/llm/routes/:id", (req, res) => {
     res.status(404).json({ error: "Route not found" });
     return;
   }
-  ROUTES[idx] = { ...ROUTES[idx], ...req.body, id: req.params.id };
+  const body = PatchLlmRouteBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  ROUTES[idx] = { ...ROUTES[idx], ...body.data, id: req.params.id };
   res.json(ROUTES[idx]);
 });
 

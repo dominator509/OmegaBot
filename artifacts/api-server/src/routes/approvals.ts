@@ -1,6 +1,12 @@
 import { Router } from "express";
+import { z } from "zod";
 
 const router = Router();
+
+const ApprovalDecisionBody = z.object({
+  decidedBy: z.string().min(1).max(256).optional(),
+  reason: z.string().max(1000).optional(),
+});
 
 const APPROVALS: Record<string, unknown>[] = [
   {
@@ -123,12 +129,21 @@ router.post("/approvals/:id/approve", (req, res) => {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
+  if (APPROVALS[idx].status !== "pending") {
+    res.status(409).json({ error: `Cannot approve an approval in '${APPROVALS[idx].status as string}' state` });
+    return;
+  }
+  const body = ApprovalDecisionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
   APPROVALS[idx] = {
     ...APPROVALS[idx],
     status: "approved",
     decidedAt: new Date().toISOString(),
-    decidedBy: req.body.decidedBy ?? "operator",
-    reason: req.body.reason,
+    decidedBy: body.data.decidedBy ?? "operator",
+    reason: body.data.reason,
   };
   res.json(APPROVALS[idx]);
 });
@@ -139,12 +154,21 @@ router.post("/approvals/:id/reject", (req, res) => {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
+  if (APPROVALS[idx].status !== "pending") {
+    res.status(409).json({ error: `Cannot reject an approval in '${APPROVALS[idx].status as string}' state` });
+    return;
+  }
+  const body = ApprovalDecisionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
   APPROVALS[idx] = {
     ...APPROVALS[idx],
     status: "rejected",
     decidedAt: new Date().toISOString(),
-    decidedBy: req.body.decidedBy ?? "operator",
-    reason: req.body.reason,
+    decidedBy: body.data.decidedBy ?? "operator",
+    reason: body.data.reason,
   };
   res.json(APPROVALS[idx]);
 });
