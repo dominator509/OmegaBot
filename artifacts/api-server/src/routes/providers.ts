@@ -13,10 +13,12 @@ const ProviderModelSchema = z.object({
   avgLatencyMs: z.number().int().positive(),
 });
 
+const ProviderTypeSchema = z.enum(["openai-compat", "anthropic"]);
+
 const UpsertProviderBody = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(128),
-  type: z.enum(["openai-compat", "anthropic"]).optional(),
+  type: ProviderTypeSchema.optional(),
   baseUrl: z.string().url().optional().or(z.literal("")),
   apiKey: z.string().optional(),
   enabled: z.boolean().optional(),
@@ -25,7 +27,7 @@ const UpsertProviderBody = z.object({
 
 const PatchProviderBody = z.object({
   name: z.string().min(1).max(128).optional(),
-  type: z.enum(["openai-compat", "anthropic"]).optional(),
+  type: ProviderTypeSchema.optional(),
   baseUrl: z.string().url().optional().or(z.literal("")),
   apiKey: z.string().optional(),
   enabled: z.boolean().optional(),

@@ -29,6 +29,8 @@ export interface ProviderConfigPublic extends Omit<ProviderConfig, "apiKey"> {
   hasApiKey: boolean;
 }
 
+const VALID_TYPES: ProviderType[] = ["openai-compat", "anthropic"];
+
 const DEFAULT_PROVIDERS: ProviderConfig[] = [
   {
     id: "openai",
@@ -145,6 +147,10 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
 
 let PROVIDERS: ProviderConfig[] = JSON.parse(JSON.stringify(DEFAULT_PROVIDERS));
 
+function isValidProviderType(type: string): type is ProviderType {
+  return VALID_TYPES.includes(type as ProviderType);
+}
+
 function maskKey(key: string): string {
   if (!key || key.length < 8) return key ? "••••••••" : "";
   return key.slice(0, 4) + "••••••••" + key.slice(-4);
@@ -186,7 +192,7 @@ export const providerRegistry = {
     const created: ProviderConfig = {
       id: data.id,
       name: data.name ?? data.id,
-      type: data.type ?? "openai-compat",
+      type: isValidProviderType(data.type ?? "openai-compat") ? (data.type ?? "openai-compat") : "openai-compat",
       baseUrl: data.baseUrl ?? "",
       apiKey: data.apiKey ?? "",
       enabled: data.enabled ?? false,
@@ -204,6 +210,7 @@ export const providerRegistry = {
     const updated: ProviderConfig = {
       ...existing,
       ...data,
+      type: data.type && isValidProviderType(data.type) ? data.type : existing.type,
       apiKey: data.apiKey !== undefined ? (data.apiKey || existing.apiKey) : existing.apiKey,
       updatedAt: new Date().toISOString(),
     };

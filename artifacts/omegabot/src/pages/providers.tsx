@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Trash2, TestTube2, Key, Server, ChevronDown, ChevronRight,
@@ -79,7 +79,9 @@ function useProviders() {
     }
   };
 
-  useState(() => { void load(); });
+  useEffect(() => {
+    void load();
+  }, []);
 
   return { providers, loading, error, reload: load, setProviders };
 }
@@ -239,6 +241,10 @@ export default function Providers() {
       toast({ title: "Failed to configure provider", variant: "destructive" });
     }
   }
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   if (loading) {
     return (
