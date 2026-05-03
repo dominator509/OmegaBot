@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle, Shield } from "lucide-react";
+import { CardGridSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +27,7 @@ const HEALTH_COLORS = {
 export default function Adapters() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: raw, isError } = useListAdapters({ query: { queryKey: ["adapters"], retry: false, refetchInterval: 30000 } });
+  const { data: raw, isError, isLoading } = useListAdapters({ query: { queryKey: ["adapters"], retry: false, refetchInterval: 30000 } });
   const adapters = useMemo(() => (isError || !raw) ? MOCK_ADAPTERS : ((raw as unknown as { items: typeof MOCK_ADAPTERS })?.items ?? MOCK_ADAPTERS), [raw, isError]);
   const isDemo = isError || !raw;
 
@@ -37,6 +38,8 @@ export default function Adapters() {
     degraded: adapters.filter((a) => (a.health as Record<string, unknown>)?.status === "degraded").length,
     unhealthy: adapters.filter((a) => ["unhealthy", "error"].includes(((a.health as Record<string, unknown>)?.status as string) ?? "")).length,
   }), [adapters]);
+
+  if (isLoading && !raw) return <CardGridSkeleton />;
 
   return (
     <div className="flex-1 overflow-y-auto p-6">

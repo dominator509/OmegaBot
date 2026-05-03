@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
+import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 import StartHere from "@/pages/start-here";
 import Overview from "@/pages/overview";
@@ -21,9 +22,12 @@ import Settings from "@/pages/settings";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
+      retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 30000,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
@@ -31,21 +35,23 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <SidebarLayout>
-      <Switch>
-        <Route path="/" component={StartHere} />
-        <Route path="/overview" component={Overview} />
-        <Route path="/tasks*" component={Tasks} />
-        <Route path="/commands*" component={Commands} />
-        <Route path="/approvals*" component={Approvals} />
-        <Route path="/events" component={Events} />
-        <Route path="/adapters*" component={Adapters} />
-        <Route path="/llm" component={LlmRouting} />
-        <Route path="/integrations" component={Integrations} />
-        <Route path="/github*" component={GitHub} />
-        <Route path="/artifacts" component={ArtifactsPage} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
+      <ErrorBoundary>
+        <Switch>
+          <Route path="/" component={StartHere} />
+          <Route path="/overview" component={Overview} />
+          <Route path="/tasks*" component={Tasks} />
+          <Route path="/commands*" component={Commands} />
+          <Route path="/approvals*" component={Approvals} />
+          <Route path="/events" component={Events} />
+          <Route path="/adapters*" component={Adapters} />
+          <Route path="/llm" component={LlmRouting} />
+          <Route path="/integrations" component={Integrations} />
+          <Route path="/github*" component={GitHub} />
+          <Route path="/artifacts" component={ArtifactsPage} />
+          <Route path="/settings" component={Settings} />
+          <Route component={NotFound} />
+        </Switch>
+      </ErrorBoundary>
     </SidebarLayout>
   );
 }

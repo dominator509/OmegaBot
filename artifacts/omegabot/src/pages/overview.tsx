@@ -7,6 +7,7 @@ import { useGetOverviewSummary } from "@workspace/api-client-react";
 import { MOCK_OVERVIEW } from "@/lib/mock-data";
 import { STATUS_COLORS, LEVEL_COLORS, formatRelativeTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { StatsSkeleton } from "@/components/page-skeleton";
 
 const PIE_COLORS: Record<string, string> = {
   running: "#3b82f6", completed: "#22c55e", failed: "#ef4444",
@@ -18,7 +19,7 @@ export default function Overview() {
     query: { queryKey: ["overview-summary"], retry: false, refetchInterval: 30000 },
   });
 
-  const data = useMemo(() => raw ?? MOCK_OVERVIEW, [raw]);
+  const data = raw ?? MOCK_OVERVIEW;
   const isDemo = isError || !raw;
 
   const runTrendFormatted = useMemo(() => {
@@ -29,6 +30,8 @@ export default function Overview() {
       success: r.count - r.failed,
     }));
   }, [data.runTrend]);
+
+  if (isLoading && !raw) return <StatsSkeleton />;
 
   const stats = [
     { label: "Active tasks", value: data.activeTasks, icon: Activity, color: "text-blue-500" },

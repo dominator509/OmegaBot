@@ -1,10 +1,55 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+
+const isProduction = process.env.NODE_ENV === "production";
+
+app.use(
+  helmet({
+    contentSecurityPolicy: isProduction
+      ? undefined
+      : false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : undefined;
+
+app.use(
+  cors({
+    origin: allowedOrigins ?? true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    maxAge: 86400,
+  }),
+);
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — please try again shortly." },
+  skip: () => !isProduction,
+});
+
+const mutateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many write requests — please slow down." },
+  skip: () => !isProduction,
+});
 
 app.use(
   pinoHttp({
@@ -25,10 +70,34 @@ app.use(
     },
   }),
 );
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
+app.use(express.json({ limit: "512kb" }));
+app.use(express.urlencoded({ extended: true, limit: "512kb" }));
+
+app.use("/api", generalLimiter);
+app.use("/api", (req, _res, next) => {
+  if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+    mutateLimiter(req, _res, next);
+  } else {
+    next();
+  }
+});
 app.use("/api", router);
+
+app.use("/api/*path", (_req: Request, res: Response) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const log = (req as Request & { log?: typeof logger }).log ?? logger;
+  log.error({ err }, "Unhandled error");
+  const status = (err as { status?: number; statusCode?: number })?.status
+    ?? (err as { status?: number; statusCode?: number })?.statusCode
+    ?? 500;
+  const message = isProduction
+    ? "Internal server error"
+    : (err instanceof Error ? err.message : "Internal server error");
+  res.status(status).json({ error: message });
+});
 
 export default app;

@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod/v4";
 import {
   ListTasksQueryParams,
   CreateTaskBody,

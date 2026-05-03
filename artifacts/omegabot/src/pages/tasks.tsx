@@ -12,6 +12,7 @@ import { useListTasks, useListRuns, useCreateTask } from "@workspace/api-client-
 import { MOCK_TASKS, MOCK_RUNS } from "@/lib/mock-data";
 import { cn, STATUS_COLORS, PRIORITY_COLORS, ADAPTER_COLORS, formatRelativeTime, formatDuration, truncate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { PageSkeleton } from "@/components/page-skeleton";
 
 export default function Tasks() {
   const [search, setSearch] = useState("");
@@ -20,7 +21,7 @@ export default function Tasks() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTask, setNewTask] = useState({ name: "", description: "", priority: "medium", adapter: "gmail" });
 
-  const { data: tasksData, isError: tasksError } = useListTasks(undefined, { query: { queryKey: ["tasks"], retry: false, refetchInterval: 30000 } });
+  const { data: tasksData, isError: tasksError, isLoading: tasksLoading } = useListTasks(undefined, { query: { queryKey: ["tasks"], retry: false, refetchInterval: 30000 } });
   const { data: runsData, isError: runsError } = useListRuns(undefined, { query: { queryKey: ["runs"], retry: false, refetchInterval: 30000 } });
   const { data: taskRunsData } = useListRuns(undefined, { query: { queryKey: ["runs-for-task", expandedTask], retry: false, enabled: !!expandedTask } });
   const createTask = useCreateTask();
@@ -38,6 +39,8 @@ export default function Tasks() {
       return matchSearch && matchStatus;
     });
   }, [tasks, search, statusFilter]);
+
+  if (tasksLoading && !tasksData) return <PageSkeleton />;
 
   const getTaskRuns = (taskId: string) => allRuns.filter((r) => r.taskId === taskId);
 
