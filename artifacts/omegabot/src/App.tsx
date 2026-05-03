@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 import StartHere from "@/pages/start-here";
 import Overview from "@/pages/overview";
+import Chat from "@/pages/chat";
 import Tasks from "@/pages/tasks";
 import Commands from "@/pages/commands";
 import Approvals from "@/pages/approvals";
@@ -39,6 +40,7 @@ function Router() {
         <Switch>
           <Route path="/" component={StartHere} />
           <Route path="/overview" component={Overview} />
+          <Route path="/chat" component={Chat} />
           <Route path="/tasks*" component={Tasks} />
           <Route path="/commands*" component={Commands} />
           <Route path="/approvals*" component={Approvals} />

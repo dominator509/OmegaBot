@@ -28,7 +28,8 @@ import {
   Zap,
   AlertTriangle,
   Moon,
-  Sun
+  Sun,
+  MessageSquare
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,14 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
                       <Link href="/overview">
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Overview</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/chat"}>
+                      <Link href="/chat">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Chat</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
