@@ -1,96 +1,249 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Sparkles } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { Send, Sparkles, StopCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
-type ChatItem = { role: "user" | "assistant"; content: string };
+type Role = "user" | "assistant";
+type ChatItem = { role: Role; content: string; streaming?: boolean };
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Chat() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatItem[]>([
-    { role: "assistant", content: "Welcome to OmegaBot chat. Ask me about tasks, approvals, or how to operate the assistant." },
+    {
+      role: "assistant",
+      content: "Hello! I'm OmegaBot. I can help you manage tasks, review approvals, configure adapters, and operate the platform. What would you like to do?",
+    },
   ]);
-  const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading]);
+  function stopStreaming() {
+    abortRef.current?.abort();
+    setStreaming(false);
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.streaming) {
+        return [...prev.slice(0, -1), { ...last, streaming: false }];
+      }
+      return prev;
+    });
+  }
+
+  function clearChat() {
+    setMessages([
+      {
+        role: "assistant",
+        content: "Chat cleared. How can I help you?",
+      },
+    ]);
+    setInput("");
+  }
 
   async function sendMessage() {
-    if (!canSend) return;
-    const next = [...messages, { role: "user", content: input.trim() } as const];
-    setMessages(next);
+    const text = input.trim();
+    if (!text || streaming) return;
+
+    const userMsg: ChatItem = { role: "user", content: text };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
     setInput("");
-    setLoading(true);
+    setStreaming(true);
+
+    // Append placeholder for assistant streaming message
+    setMessages((prev) => [...prev, { role: "assistant", content: "", streaming: true }]);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const response = await fetch("/api/chat", {
+      const apiMessages = nextMessages.map((m) => ({ role: m.role, content: m.content }));
+
+      const response = await fetch(`${BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: apiMessages }),
+        signal: controller.signal,
       });
-      if (!response.ok) throw new Error("Chat request failed");
-      const data = await response.json() as { messages?: ChatItem[]; reply?: string };
-      if (data.messages?.length) setMessages(data.messages);
-      else if (data.reply) setMessages((prev) => [...prev, { role: "assistant", content: data.reply as string }]);
-      void queryClient.invalidateQueries({ queryKey: ["overview-summary"] });
-    } catch {
-      toast({ title: "Chat failed", description: "The assistant could not respond. Please try again.", variant: "destructive" });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+
+          try {
+            const event = JSON.parse(raw) as {
+              content?: string;
+              done?: boolean;
+              error?: string;
+              message?: ChatItem;
+            };
+
+            if (event.error) {
+              throw new Error(event.error);
+            }
+
+            if (event.content) {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (!last || last.role !== "assistant") return prev;
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: last.content + event.content },
+                ];
+              });
+            }
+
+            if (event.done) {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (!last || last.role !== "assistant") return prev;
+                return [...prev.slice(0, -1), { ...last, streaming: false }];
+              });
+            }
+          } catch (parseErr) {
+            if ((parseErr as Error).message !== "Unexpected end of JSON input") {
+              throw parseErr;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        return;
+      }
+      toast({
+        title: "Response failed",
+        description: "The assistant could not respond. Please try again.",
+        variant: "destructive",
+      });
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.streaming) return prev.slice(0, -1);
+        return prev;
+      });
     } finally {
-      setLoading(false);
+      setStreaming(false);
+      abortRef.current = null;
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      void sendMessage();
     }
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Assistant Chat</h1>
-          <p className="text-sm text-muted-foreground">Talk to OmegaBot like an operator console.</p>
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">OmegaBot Chat</h1>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">gpt-5.1</span>
         </div>
-        <Badge variant="outline" className="text-xs text-muted-foreground">live chat</Badge>
+        <Button variant="ghost" size="sm" onClick={clearChat} className="gap-1.5 text-xs text-muted-foreground">
+          <RotateCcw className="h-3.5 w-3.5" /> New chat
+        </Button>
       </div>
 
-      <Card className="p-4 mb-4 min-h-[55vh] flex flex-col gap-3 bg-background/80">
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-          {messages.map((message, idx) => (
-            <div key={idx} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                {message.content}
-              </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={cn("flex gap-3 max-w-3xl mx-auto", msg.role === "user" ? "flex-row-reverse" : "flex-row")}
+          >
+            <div className={cn(
+              "h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold",
+              msg.role === "user"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted border",
+            )}>
+              {msg.role === "user" ? "U" : "Ω"}
             </div>
-          ))}
-          <div ref={endRef} />
-        </div>
-        <div className="border-t pt-4 space-y-3">
+            <div className={cn(
+              "flex-1 rounded-2xl px-4 py-3 text-sm leading-relaxed",
+              msg.role === "user"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted",
+            )}>
+              {msg.content || (msg.streaming ? (
+                <span className="flex gap-1 items-center text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
+                </span>
+              ) : "")}
+              {msg.streaming && msg.content && (
+                <span className="inline-block w-0.5 h-3.5 bg-current ml-0.5 animate-pulse align-text-bottom" />
+              )}
+            </div>
+          </div>
+        ))}
+        <div ref={endRef} />
+      </div>
+
+      <div className="border-t px-4 py-4 bg-background">
+        <div className="max-w-3xl mx-auto space-y-2">
           <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask OmegaBot anything..."
-            className="min-h-24 resize-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                void sendMessage();
-              }
-            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask OmegaBot anything… (Ctrl+Enter to send)"
+            className="min-h-20 max-h-40 resize-none text-sm"
+            disabled={streaming}
           />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Press Ctrl/Cmd + Enter to send.</p>
-            <Button onClick={() => void sendMessage()} disabled={!canSend} className="gap-2">
-              <Send className="h-4 w-4" /> Send
-            </Button>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Ctrl / ⌘ + Enter to send</p>
+            <div className="flex gap-2">
+              {streaming ? (
+                <Button variant="outline" size="sm" onClick={stopStreaming} className="gap-1.5">
+                  <StopCircle className="h-3.5 w-3.5" /> Stop
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => void sendMessage()}
+                  disabled={!input.trim()}
+                  className="gap-1.5"
+                >
+                  <Send className="h-3.5 w-3.5" /> Send
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

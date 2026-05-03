@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, Activity, ListTodo, Command, CheckCircle, Network, Cpu, FileCode, GitBranch, Zap, Shield, Key, GitMerge, MessageSquare } from "lucide-react";
+import { ArrowRight, Activity, ListTodo, Command, CheckCircle, Network, Cpu, Zap, Shield, Key, GitMerge, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

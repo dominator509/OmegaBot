@@ -12,6 +12,8 @@
   "dependencies": {
     "@types/express-rate-limit": "^6.0.2",
     "@workspace/api-zod": "workspace:*",
+    "@workspace/integrations-openai-ai-server": "workspace:*",
+    "zod": "catalog:",
     "@workspace/db": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
