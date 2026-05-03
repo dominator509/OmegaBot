@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Send, Sparkles, StopCircle, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useGetSettings } from "@workspace/api-client-react";
 
 type Role = "user" | "assistant";
 type ChatItem = { role: Role; content: string; streaming?: boolean };
@@ -17,11 +18,12 @@ export default function Chat() {
     { role: "assistant", content: "I can chat, review the dashboard, and execute permitted actions. Enable autopilot in Settings for full autonomy with risk acknowledgment." },
   ]);
   const [streaming, setStreaming] = useState(false);
-  const [autopilotEnabled, setAutopilotEnabled] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
+  const { data: settings } = useGetSettings({ query: { queryKey: ["settings"], retry: false, staleTime: 300000 } });
+  const autopilotEnabled = Boolean((settings as { autopilotEnabled?: boolean; autopilotRiskAccepted?: boolean } | undefined)?.autopilotEnabled && (settings as { autopilotEnabled?: boolean; autopilotRiskAccepted?: boolean } | undefined)?.autopilotRiskAccepted);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,7 +53,7 @@ export default function Chat() {
       body: JSON.stringify({ action, target, requiresApproval: !autopilotEnabled }),
     });
     if (!response.ok) throw new Error("Control action failed");
-    return response.json() as Promise<{ message?: string }>;
+    return response.json() as Promise<{ message?: string; state?: string }>;
   }
 
   async function sendMessage() {
@@ -106,7 +108,8 @@ export default function Chat() {
             });
           }
           if (event.done) {
-            if (assistantText.match(/approve|delete|merge|send|write/i)) {
+            const shouldRequestApproval = Boolean(assistantText.match(/approve|delete|merge|send|write/i));
+            if (shouldRequestApproval) {
               try {
                 await performControlAction("assistant_response", text);
               } catch {
@@ -159,7 +162,7 @@ export default function Chat() {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, idx) => (
-          <div key={idx} className={cn("flex gap-3 max-w-3xl mx-auto", msg.role === "user" ? "flex-row-reverse" : "flex-row")}> 
+          <div key={idx} className={cn("flex gap-3 max-w-3xl mx-auto", msg.role === "user" ? "flex-row-reverse" : "flex-row")}>
             <div className={cn("h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold", msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted border")}>{msg.role === "user" ? "U" : "Ω"}</div>
             <div className={cn("flex-1 rounded-2xl px-4 py-3 text-sm leading-relaxed", msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted")}>{msg.content || (msg.streaming ? <span className="flex gap-1 items-center text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:0ms]" /><span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" /><span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" /></span> : "")}{msg.streaming && msg.content && <span className="inline-block w-0.5 h-3.5 bg-current ml-0.5 animate-pulse align-text-bottom" />}</div>
           </div>
@@ -171,7 +174,7 @@ export default function Chat() {
         <div className="max-w-3xl mx-auto space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Controlled actions require permission; enable autopilot with explicit risk acknowledgment in Settings.</span>
-            <Button variant="outline" size="sm" onClick={() => setAutopilotEnabled((v) => !v)} className="gap-1.5">
+            <Button variant="outline" size="sm" disabled className="gap-1.5">
               <ShieldAlert className="h-3.5 w-3.5" /> {autopilotEnabled ? "Autopilot on" : "Autopilot off"}
             </Button>
           </div>

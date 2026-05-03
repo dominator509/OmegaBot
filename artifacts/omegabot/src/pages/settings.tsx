@@ -12,20 +12,22 @@ import { MOCK_SETTINGS, MOCK_LLM_MODELS } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-type Settings = typeof MOCK_SETTINGS;
+type Settings = typeof MOCK_SETTINGS & {
+  autopilotEnabled?: boolean;
+  autopilotRiskAccepted?: boolean;
+};
 
 export default function Settings() {
   const { data: rawSettings, isError } = useGetSettings({ query: { queryKey: ["settings"], retry: false } });
   const updateSettings = useUpdateSettings();
   const [saved, setSaved] = useState(false);
-  const [autoPilotEnabled, setAutoPilotEnabled] = useState(false);
-  const [riskAck, setRiskAck] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const initial = useMemo(() => (isError || !rawSettings) ? MOCK_SETTINGS : rawSettings as Settings, [rawSettings, isError]);
   const [form, setForm] = useState<Settings>(MOCK_SETTINGS);
   const isDemo = isError || !rawSettings;
+  const autopilotEnabled = Boolean(form.autopilotEnabled && form.autopilotRiskAccepted);
 
   useEffect(() => {
     setForm(initial);
@@ -36,7 +38,8 @@ export default function Settings() {
   }
 
   function handleSave() {
-    updateSettings.mutate({ data: form }, {
+    const { autopilotEnabled: _autopilotEnabled, autopilotRiskAccepted: _autopilotRiskAccepted, ...payload } = form;
+    updateSettings.mutate({ data: payload }, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ["settings"] });
         setSaved(true);
@@ -74,7 +77,7 @@ export default function Settings() {
                 <div className="text-sm font-medium">Autopilot mode</div>
                 <p className="text-xs text-muted-foreground">Lets the AI perform permitted dashboard actions automatically.</p>
               </div>
-              <Switch checked={autoPilotEnabled} onCheckedChange={setAutoPilotEnabled} />
+              <Switch checked={Boolean(form.autopilotEnabled)} onCheckedChange={(v) => set("autopilotEnabled", v)} />
             </div>
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-200">
               <div className="font-semibold mb-1">Risk disclaimer</div>
@@ -85,11 +88,9 @@ export default function Settings() {
                 <div className="text-sm font-medium">I understand the risk</div>
                 <p className="text-xs text-muted-foreground">Required before enabling autopilot.</p>
               </div>
-              <Switch checked={riskAck} onCheckedChange={setRiskAck} />
+              <Switch checked={Boolean(form.autopilotRiskAccepted)} onCheckedChange={(v) => set("autopilotRiskAccepted", v)} />
             </div>
-            <div className="text-xs text-muted-foreground">
-              Autopilot is {autoPilotEnabled && riskAck ? "enabled" : "disabled"}. The assistant can only act within the controls exposed by the dashboard and backend.
-            </div>
+            <div className="text-xs text-muted-foreground">Autopilot is {autopilotEnabled ? "enabled" : "disabled"}. The assistant can only act within the controls exposed by the dashboard and backend.</div>
           </CardContent>
         </Card>
 

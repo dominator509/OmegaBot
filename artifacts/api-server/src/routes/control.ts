@@ -4,10 +4,11 @@ import { z } from "zod";
 const router = Router();
 
 const ControlActionBody = z.object({
-  action: z.string().min(1),
-  target: z.string().optional(),
+  action: z.enum(["assistant_response", "approve", "reject", "create_task", "update_task", "run_task", "send_message"]),
+  target: z.string().min(1).max(256).optional(),
   payload: z.record(z.unknown()).optional(),
   requiresApproval: z.boolean().optional(),
+  reason: z.string().max(500).optional(),
 });
 
 router.post("/control", (req, res) => {
@@ -17,15 +18,17 @@ router.post("/control", (req, res) => {
     return;
   }
 
+  const requiresApproval = parsed.data.requiresApproval ?? true;
+  const actionState = requiresApproval ? "queued_for_approval" : "executed";
+
   res.json({
     ok: true,
     action: parsed.data.action,
     target: parsed.data.target ?? null,
     payload: parsed.data.payload ?? {},
-    requiresApproval: parsed.data.requiresApproval ?? false,
-    message: parsed.data.requiresApproval
-      ? "Queued for approval"
-      : "Action executed",
+    requiresApproval,
+    state: actionState,
+    message: requiresApproval ? "Queued for approval" : "Action executed",
   });
 });
 
