@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Save, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Save, RefreshCw, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ export default function Settings() {
   const { data: rawSettings, isError } = useGetSettings({ query: { queryKey: ["settings"], retry: false } });
   const updateSettings = useUpdateSettings();
   const [saved, setSaved] = useState(false);
+  const [autoPilotEnabled, setAutoPilotEnabled] = useState(false);
+  const [riskAck, setRiskAck] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -25,7 +27,9 @@ export default function Settings() {
   const [form, setForm] = useState<Settings>(MOCK_SETTINGS);
   const isDemo = isError || !rawSettings;
 
-  useMemo(() => { setForm(initial); }, [initial]);
+  useEffect(() => {
+    setForm(initial);
+  }, [initial]);
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -60,6 +64,35 @@ export default function Settings() {
       </div>
 
       <div className="max-w-2xl space-y-6">
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-amber-500" /> Autonomy</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium">Autopilot mode</div>
+                <p className="text-xs text-muted-foreground">Lets the AI perform permitted dashboard actions automatically.</p>
+              </div>
+              <Switch checked={autoPilotEnabled} onCheckedChange={setAutoPilotEnabled} />
+            </div>
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-200">
+              <div className="font-semibold mb-1">Risk disclaimer</div>
+              <p>Full autonomy can create, modify, approve, and execute actions within the permissions you grant. Use only if you understand the consequences. High-risk actions should still require explicit approval.</p>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium">I understand the risk</div>
+                <p className="text-xs text-muted-foreground">Required before enabling autopilot.</p>
+              </div>
+              <Switch checked={riskAck} onCheckedChange={setRiskAck} />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Autopilot is {autoPilotEnabled && riskAck ? "enabled" : "disabled"}. The assistant can only act within the controls exposed by the dashboard and backend.
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">General</CardTitle>
@@ -152,28 +185,6 @@ export default function Settings() {
                 <Label>Staleness threshold (ms)</Label>
                 <Input type="number" value={form.stalenessThresholdMs} onChange={(e) => set("stalenessThresholdMs", Number(e.target.value))} />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Features</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Event streaming</div>
-                <p className="text-xs text-muted-foreground">Emit real-time events via SSE for monitoring</p>
-              </div>
-              <Switch checked={form.enableEventStreaming} onCheckedChange={(v) => set("enableEventStreaming", v)} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">Idempotency</div>
-                <p className="text-xs text-muted-foreground">Detect and deduplicate commands with matching idempotency keys</p>
-              </div>
-              <Switch checked={form.enableIdempotency} onCheckedChange={(v) => set("enableIdempotency", v)} />
             </div>
           </CardContent>
         </Card>
