@@ -157,6 +157,11 @@ router.patch("/llm/routes/:id", (req, res) => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+  const targetModelId = body.data.targetModelId;
+  if (targetModelId && !providerRegistry.getAllModels().some((m) => m.id === targetModelId)) {
+    res.status(400).json({ error: "Target model not found" });
+    return;
+  }
   ROUTES[idx] = { ...ROUTES[idx], ...body.data, id: req.params.id };
   res.json(ROUTES[idx]);
 });

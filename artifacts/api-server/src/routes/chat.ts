@@ -96,6 +96,10 @@ router.post("/chat", async (req: Request, res: Response) => {
   }
 
   const { messages, model: requestedModel, providerId: requestedProviderId } = parsed.data;
+  if (messages.some((m) => m.content.length > 20000)) {
+    res.status(400).json({ error: "Message content too long" });
+    return;
+  }
 
   const chatMessages = [
     { role: "system" as const, content: SYSTEM_PROMPT },

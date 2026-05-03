@@ -129,8 +129,13 @@ router.post("/approvals/:id/approve", (req, res) => {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  if (APPROVALS[idx].status !== "pending") {
-    res.status(409).json({ error: `Cannot approve an approval in '${APPROVALS[idx].status as string}' state` });
+  const approval = APPROVALS[idx] as { status?: string; expiresAt?: string };
+  if (approval.status !== "pending") {
+    res.status(409).json({ error: `Cannot approve an approval in '${approval.status ?? "unknown"}' state` });
+    return;
+  }
+  if (approval.expiresAt && new Date(approval.expiresAt).getTime() < Date.now()) {
+    res.status(409).json({ error: "Cannot approve an expired approval" });
     return;
   }
   const body = ApprovalDecisionBody.safeParse(req.body);
@@ -139,7 +144,7 @@ router.post("/approvals/:id/approve", (req, res) => {
     return;
   }
   APPROVALS[idx] = {
-    ...APPROVALS[idx],
+    ...approval,
     status: "approved",
     decidedAt: new Date().toISOString(),
     decidedBy: body.data.decidedBy ?? "operator",
@@ -154,8 +159,9 @@ router.post("/approvals/:id/reject", (req, res) => {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  if (APPROVALS[idx].status !== "pending") {
-    res.status(409).json({ error: `Cannot reject an approval in '${APPROVALS[idx].status as string}' state` });
+  const approval = APPROVALS[idx] as { status?: string };
+  if (approval.status !== "pending") {
+    res.status(409).json({ error: `Cannot reject an approval in '${approval.status ?? "unknown"}' state` });
     return;
   }
   const body = ApprovalDecisionBody.safeParse(req.body);
@@ -164,7 +170,7 @@ router.post("/approvals/:id/reject", (req, res) => {
     return;
   }
   APPROVALS[idx] = {
-    ...APPROVALS[idx],
+    ...approval,
     status: "rejected",
     decidedAt: new Date().toISOString(),
     decidedBy: body.data.decidedBy ?? "operator",

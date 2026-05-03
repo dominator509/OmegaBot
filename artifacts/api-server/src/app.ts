@@ -29,7 +29,7 @@ if (isProduction && !allowedOrigins) {
 
 app.use(
   cors({
-    origin: allowedOrigins ?? (isProduction ? false : true),
+    origin: allowedOrigins ?? (isProduction ? [] : true),
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
