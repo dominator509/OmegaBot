@@ -29,7 +29,8 @@ export function formatBytes(bytes: number | undefined): string {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
-export function formatNumber(n: number): string {
+export function formatNumber(n: number | null | undefined): string {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();

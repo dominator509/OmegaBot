@@ -25,7 +25,10 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const initial = useMemo(() => (isError || !rawSettings) ? MOCK_SETTINGS : rawSettings as Settings, [rawSettings, isError]);
+  const initial = useMemo(
+    () => (isError || !rawSettings) ? MOCK_SETTINGS : { ...MOCK_SETTINGS, ...(rawSettings as Settings) },
+    [rawSettings, isError],
+  );
   const liveModels = useMemo(
     () => (modelsError || !rawModels) ? MOCK_LLM_MODELS : ((rawModels as unknown as { items: typeof MOCK_LLM_MODELS })?.items ?? MOCK_LLM_MODELS),
     [rawModels, modelsError]
@@ -35,7 +38,7 @@ export default function Settings() {
   const autopilotEnabled = Boolean(form.autopilotEnabled && form.autopilotRiskAccepted);
 
   useEffect(() => {
-    setForm(initial);
+    setForm({ ...MOCK_SETTINGS, ...initial });
   }, [initial]);
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
@@ -107,7 +110,7 @@ export default function Settings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="systemName">System name</Label>
-                <Input id="systemName" value={form.systemName} onChange={(e) => set("systemName", e.target.value)} />
+                <Input id="systemName" value={form.systemName ?? ""} onChange={(e) => set("systemName", e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label>Version</Label>
@@ -116,7 +119,7 @@ export default function Settings() {
             </div>
             <div className="space-y-1.5">
               <Label>Log level</Label>
-              <Select value={form.logLevel} onValueChange={(v) => set("logLevel", v)}>
+              <Select value={form.logLevel ?? "info"} onValueChange={(v) => set("logLevel", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["debug", "info", "warn", "error"].map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
@@ -138,7 +141,7 @@ export default function Settings() {
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Default LLM model</Label>
-              <Select value={form.defaultLlmModelId} onValueChange={(v) => set("defaultLlmModelId", v)}>
+              <Select value={form.defaultLlmModelId ?? "gpt-4o"} onValueChange={(v) => set("defaultLlmModelId", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {liveModels.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} — {m.provider}</SelectItem>)}
@@ -159,11 +162,11 @@ export default function Settings() {
                 <div className="text-sm font-medium">Require approval for high-risk actions</div>
                 <p className="text-xs text-muted-foreground">Gate commands marked isHighRisk behind human approval</p>
               </div>
-              <Switch checked={form.requireApprovalForHighRisk} onCheckedChange={(v) => set("requireApprovalForHighRisk", v)} />
+              <Switch checked={Boolean(form.requireApprovalForHighRisk)} onCheckedChange={(v) => set("requireApprovalForHighRisk", v)} />
             </div>
             <div className="space-y-1.5">
               <Label>Approval timeout (minutes)</Label>
-              <Input type="number" value={form.approvalTimeoutMinutes} onChange={(e) => set("approvalTimeoutMinutes", Number(e.target.value))} className="w-32" />
+              <Input type="number" value={form.approvalTimeoutMinutes ?? 60} onChange={(e) => set("approvalTimeoutMinutes", Number(e.target.value))} className="w-32" />
               <p className="text-xs text-muted-foreground">Requests not acted on within this time are auto-rejected</p>
             </div>
           </CardContent>
@@ -177,19 +180,19 @@ export default function Settings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Max concurrent tasks</Label>
-                <Input type="number" value={form.maxConcurrentTasks} onChange={(e) => set("maxConcurrentTasks", Number(e.target.value))} />
+                <Input type="number" value={form.maxConcurrentTasks ?? 5} onChange={(e) => set("maxConcurrentTasks", Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Max retries</Label>
-                <Input type="number" value={form.maxRetries} onChange={(e) => set("maxRetries", Number(e.target.value))} />
+                <Input type="number" value={form.maxRetries ?? 3} onChange={(e) => set("maxRetries", Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Retry delay (ms)</Label>
-                <Input type="number" value={form.retryDelayMs} onChange={(e) => set("retryDelayMs", Number(e.target.value))} />
+                <Input type="number" value={form.retryDelayMs ?? 5000} onChange={(e) => set("retryDelayMs", Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Staleness threshold (ms)</Label>
-                <Input type="number" value={form.stalenessThresholdMs} onChange={(e) => set("stalenessThresholdMs", Number(e.target.value))} />
+                <Input type="number" value={form.stalenessThresholdMs ?? 3600000} onChange={(e) => set("stalenessThresholdMs", Number(e.target.value))} />
               </div>
             </div>
           </CardContent>

@@ -112,8 +112,8 @@ export default function LlmRouting() {
                       <span className={cn("text-xs px-2 py-1 rounded font-medium", STATUS_COLORS[m.status])}>{m.status}</span>
                     </td>
                     <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground">{formatNumber(m.contextWindow)}</td>
-                    <td className="px-3 py-3 hidden lg:table-cell text-xs font-mono">${m.costPer1kTokens.toFixed(4)}</td>
-                    <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground">{m.avgLatencyMs}ms</td>
+                    <td className="px-3 py-3 hidden lg:table-cell text-xs font-mono">${(m.costPer1kTokens ?? 0).toFixed(4)}</td>
+                    <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground">{m.avgLatencyMs ?? "—"}ms</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-1">
                         {m.capabilities.slice(0, 3).map((c) => (
@@ -198,7 +198,7 @@ export default function LlmRouting() {
                     <td className="px-4 py-2.5 font-medium">{m.modelName}</td>
                     <td className="px-3 py-2.5 text-right text-xs font-mono">{formatNumber(m.tokens)}</td>
                     <td className="px-3 py-2.5 text-right text-xs">{m.requests}</td>
-                    <td className="px-3 py-2.5 text-right text-xs font-mono">${m.cost.toFixed(3)}</td>
+                    <td className="px-3 py-2.5 text-right text-xs font-mono">${(m.cost ?? 0).toFixed(3)}</td>
                   </tr>
                 ))}
               </tbody>
