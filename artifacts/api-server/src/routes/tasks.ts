@@ -4,6 +4,7 @@ import {
   CreateTaskBody,
   UpdateTaskBody,
 } from "@workspace/api-zod";
+import { getWorkflowItems, setWorkflowItems } from "../lib/platform-state.js";
 
 const router = Router();
 
@@ -102,16 +103,17 @@ const TASKS: Record<string, unknown>[] = [
 
 router.get("/tasks", (req, res) => {
   const query = ListTasksQueryParams.safeParse(req.query);
-  let tasks = [...TASKS];
+  const allTasks = getWorkflowItems("tasks", TASKS);
+  let tasks = [...allTasks];
   if (query.success && query.data.status) {
     tasks = tasks.filter((t) => t.status === query.data.status);
   }
   const limit = query.success ? query.data.limit : 50;
   tasks = tasks.slice(0, limit);
-  res.json({ items: tasks, total: TASKS.length });
+  res.json({ items: tasks, total: allTasks.length });
 });
 
-router.post("/tasks", (req, res) => {
+router.post("/tasks", async (req, res, next) => {
   const body = CreateTaskBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -131,12 +133,16 @@ router.post("/tasks", (req, res) => {
     idempotencyKey: body.data.idempotencyKey,
     writeSafe: body.data.writeSafe ?? false,
   };
-  TASKS.push(task);
-  res.status(201).json(task);
+  try {
+    await setWorkflowItems("tasks", [...getWorkflowItems("tasks", TASKS), task]);
+    res.status(201).json(task);
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/tasks/:id", (req, res) => {
-  const task = TASKS.find((t) => t.id === req.params.id);
+  const task = getWorkflowItems("tasks", TASKS).find((t) => t.id === req.params.id);
   if (!task) {
     res.status(404).json({ error: "Task not found" });
     return;
@@ -144,8 +150,9 @@ router.get("/tasks/:id", (req, res) => {
   res.json(task);
 });
 
-router.patch("/tasks/:id", (req, res) => {
-  const idx = TASKS.findIndex((t) => t.id === req.params.id);
+router.patch("/tasks/:id", async (req, res, next) => {
+  const tasks = getWorkflowItems("tasks", TASKS);
+  const idx = tasks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "Task not found" });
     return;
@@ -155,8 +162,13 @@ router.patch("/tasks/:id", (req, res) => {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  TASKS[idx] = { ...TASKS[idx], ...body.data, updatedAt: new Date().toISOString() };
-  res.json(TASKS[idx]);
+  tasks[idx] = { ...tasks[idx], ...body.data, updatedAt: new Date().toISOString() };
+  try {
+    await setWorkflowItems("tasks", tasks);
+    res.json(tasks[idx]);
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

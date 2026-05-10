@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getWorkflowItems } from "../lib/platform-state.js";
 
 const router = Router();
 
@@ -108,17 +109,18 @@ const RUNS: Record<string, unknown>[] = [
 ];
 
 router.get("/runs", (req, res) => {
-  let runs = [...RUNS];
+  const allRuns = getWorkflowItems("runs", RUNS);
+  let runs = [...allRuns];
   const { status, limit } = req.query;
   if (status && typeof status === "string") {
     runs = runs.filter((r) => r.status === status);
   }
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 500);
-  res.json({ items: runs.slice(0, lim), total: RUNS.length });
+  res.json({ items: runs.slice(0, lim), total: allRuns.length });
 });
 
 router.get("/tasks/:id/runs", (req, res) => {
-  const runs = RUNS.filter((r) => r.taskId === req.params.id);
+  const runs = getWorkflowItems("runs", RUNS).filter((r) => r.taskId === req.params.id);
   res.json({ items: runs, total: runs.length });
 });
 

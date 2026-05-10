@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { CreateLlmRouteBody } from "@workspace/api-zod";
 import { providerRegistry } from "../lib/provider-registry.js";
+import { getWorkflowItems, setWorkflowItems } from "../lib/platform-state.js";
 
 const PatchLlmRouteBody = z.object({
   name: z.string().min(1).max(256).optional(),
@@ -119,10 +120,11 @@ router.get("/llm/models", (_req, res) => {
 });
 
 router.get("/llm/routes", (_req, res) => {
-  res.json({ items: ROUTES, total: ROUTES.length });
+  const routes = getWorkflowItems("llmRoutes", ROUTES);
+  res.json({ items: routes, total: routes.length });
 });
 
-router.post("/llm/routes", (req, res) => {
+router.post("/llm/routes", async (req, res, next) => {
   const body = CreateLlmRouteBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -131,23 +133,29 @@ router.post("/llm/routes", (req, res) => {
 
   const allModels = providerRegistry.getAllModels();
   const match = allModels.find((m) => m.id === body.data.targetModelId);
+  const routes = getWorkflowItems("llmRoutes", ROUTES);
   const route = {
     id: `route-${Date.now()}`,
     name: body.data.name,
     condition: body.data.condition,
     targetModelId: body.data.targetModelId,
     targetModelName: match ? match.name : body.data.targetModelId,
-    priority: body.data.priority ?? ROUTES.length + 1,
+    priority: body.data.priority ?? routes.length + 1,
     enabled: body.data.enabled ?? true,
     matchCount: 0,
     createdAt: new Date().toISOString(),
   };
-  ROUTES.push(route);
-  res.status(201).json(route);
+  try {
+    await setWorkflowItems("llmRoutes", [...routes, route]);
+    res.status(201).json(route);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.patch("/llm/routes/:id", (req, res) => {
-  const idx = ROUTES.findIndex((r) => (r as Record<string, unknown>).id === req.params.id);
+router.patch("/llm/routes/:id", async (req, res, next) => {
+  const routes = getWorkflowItems("llmRoutes", ROUTES);
+  const idx = routes.findIndex((r) => (r as Record<string, unknown>).id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "Route not found" });
     return;
@@ -162,18 +170,29 @@ router.patch("/llm/routes/:id", (req, res) => {
     res.status(400).json({ error: "Target model not found" });
     return;
   }
-  ROUTES[idx] = { ...ROUTES[idx], ...body.data, id: req.params.id };
-  res.json(ROUTES[idx]);
+  routes[idx] = { ...routes[idx], ...body.data, id: req.params.id };
+  try {
+    await setWorkflowItems("llmRoutes", routes);
+    res.json(routes[idx]);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.delete("/llm/routes/:id", (req, res) => {
-  const idx = ROUTES.findIndex((r) => (r as Record<string, unknown>).id === req.params.id);
+router.delete("/llm/routes/:id", async (req, res, next) => {
+  const routes = getWorkflowItems("llmRoutes", ROUTES);
+  const idx = routes.findIndex((r) => (r as Record<string, unknown>).id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "Route not found" });
     return;
   }
-  ROUTES.splice(idx, 1);
-  res.status(204).end();
+  routes.splice(idx, 1);
+  try {
+    await setWorkflowItems("llmRoutes", routes);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/llm/usage", (_req, res) => {

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { CreateCommandBody, CreateCommandGroupBody } from "@workspace/api-zod";
+import { getWorkflowItems, setWorkflowItems } from "../lib/platform-state.js";
 
 const router = Router();
 
@@ -134,10 +135,11 @@ const GROUPS: Record<string, unknown>[] = [
 ];
 
 router.get("/commands", (_req, res) => {
-  res.json({ items: COMMANDS, total: COMMANDS.length });
+  const commands = getWorkflowItems("commands", COMMANDS);
+  res.json({ items: commands, total: commands.length });
 });
 
-router.post("/commands", (req, res) => {
+router.post("/commands", async (req, res, next) => {
   const body = CreateCommandBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -157,12 +159,16 @@ router.post("/commands", (req, res) => {
     createdAt: new Date().toISOString(),
     payload: body.data.payload ?? {},
   };
-  COMMANDS.push(cmd);
-  res.status(201).json(cmd);
+  try {
+    await setWorkflowItems("commands", [...getWorkflowItems("commands", COMMANDS), cmd]);
+    res.status(201).json(cmd);
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/commands/:id", (req, res) => {
-  const cmd = COMMANDS.find((c) => c.id === req.params.id);
+  const cmd = getWorkflowItems("commands", COMMANDS).find((c) => c.id === req.params.id);
   if (!cmd) {
     res.status(404).json({ error: "Command not found" });
     return;
@@ -171,10 +177,11 @@ router.get("/commands/:id", (req, res) => {
 });
 
 router.get("/command-groups", (_req, res) => {
-  res.json({ items: GROUPS, total: GROUPS.length });
+  const groups = getWorkflowItems("commandGroups", GROUPS);
+  res.json({ items: groups, total: groups.length });
 });
 
-router.post("/command-groups", (req, res) => {
+router.post("/command-groups", async (req, res, next) => {
   const body = CreateCommandGroupBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -191,8 +198,12 @@ router.post("/command-groups", (req, res) => {
     createdAt: new Date().toISOString(),
     commands: [],
   };
-  GROUPS.push(group);
-  res.status(201).json(group);
+  try {
+    await setWorkflowItems("commandGroups", [...getWorkflowItems("commandGroups", GROUPS), group]);
+    res.status(201).json(group);
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

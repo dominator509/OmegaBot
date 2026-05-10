@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { providerRegistry } from "../lib/provider-registry.js";
+import { persistPlatformState } from "../lib/platform-state.js";
 
 const router = Router();
 
@@ -63,40 +64,55 @@ router.get("/providers/:id", (req, res) => {
   res.json(public_);
 });
 
-router.put("/providers/:id", (req, res) => {
+router.put("/providers/:id", async (req, res, next) => {
   const body = UpsertProviderBody.safeParse({ ...req.body, id: req.params.id });
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  const result = providerRegistry.upsert(body.data as Parameters<typeof providerRegistry.upsert>[0]);
-  res.json(result);
+  try {
+    const result = providerRegistry.upsert(body.data as Parameters<typeof providerRegistry.upsert>[0]);
+    await persistPlatformState();
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.patch("/providers/:id", (req, res) => {
+router.patch("/providers/:id", async (req, res, next) => {
   const body = PatchProviderBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  const result = providerRegistry.patch(req.params.id, body.data);
-  if (!result) {
-    res.status(404).json({ error: "Provider not found" });
-    return;
+  try {
+    const result = providerRegistry.patch(req.params.id, body.data);
+    if (!result) {
+      res.status(404).json({ error: "Provider not found" });
+      return;
+    }
+    await persistPlatformState();
+    res.json(result);
+  } catch (error) {
+    next(error);
   }
-  res.json(result);
 });
 
-router.delete("/providers/:id", (req, res) => {
+router.delete("/providers/:id", async (req, res, next) => {
   const removed = providerRegistry.remove(req.params.id);
   if (!removed) {
     res.status(404).json({ error: "Provider not found" });
     return;
   }
-  res.status(204).end();
+  try {
+    await persistPlatformState();
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/providers/:id/models", (req, res) => {
+router.post("/providers/:id/models", async (req, res, next) => {
   const provider = providerRegistry.getById(req.params.id);
   if (!provider) {
     res.status(404).json({ error: "Provider not found" });
@@ -108,19 +124,29 @@ router.post("/providers/:id/models", (req, res) => {
     return;
   }
   const models = [...provider.models.filter((m) => m.id !== body.data.id), body.data];
-  const result = providerRegistry.patch(req.params.id, { models });
-  res.status(201).json(result);
+  try {
+    const result = providerRegistry.patch(req.params.id, { models });
+    await persistPlatformState();
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.delete("/providers/:id/models/:modelId", (req, res) => {
+router.delete("/providers/:id/models/:modelId", async (req, res, next) => {
   const provider = providerRegistry.getById(req.params.id);
   if (!provider) {
     res.status(404).json({ error: "Provider not found" });
     return;
   }
   const models = provider.models.filter((m) => m.id !== req.params.modelId);
-  const result = providerRegistry.patch(req.params.id, { models });
-  res.json(result);
+  try {
+    const result = providerRegistry.patch(req.params.id, { models });
+    await persistPlatformState();
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post("/providers/:id/test", async (req, res) => {

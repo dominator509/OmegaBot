@@ -31,7 +31,7 @@ export interface ProviderConfigPublic extends Omit<ProviderConfig, "apiKey"> {
 
 const VALID_TYPES: ProviderType[] = ["openai-compat", "anthropic"];
 
-const DEFAULT_PROVIDERS: ProviderConfig[] = [
+export const DEFAULT_PROVIDERS: ProviderConfig[] = [
   {
     id: "openai",
     name: "OpenAI",
@@ -145,7 +145,11 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
   },
 ];
 
-let PROVIDERS: ProviderConfig[] = JSON.parse(JSON.stringify(DEFAULT_PROVIDERS));
+function cloneProviders(providers: ProviderConfig[]): ProviderConfig[] {
+  return JSON.parse(JSON.stringify(providers)) as ProviderConfig[];
+}
+
+let PROVIDERS: ProviderConfig[] = cloneProviders(DEFAULT_PROVIDERS);
 
 function isValidProviderType(type: string): type is ProviderType {
   return VALID_TYPES.includes(type as ProviderType);
@@ -165,6 +169,14 @@ function toPublic(p: ProviderConfig): ProviderConfigPublic {
 }
 
 export const providerRegistry = {
+  hydrate(providers: ProviderConfig[]): void {
+    PROVIDERS = cloneProviders(providers);
+  },
+
+  snapshot(): ProviderConfig[] {
+    return cloneProviders(PROVIDERS);
+  },
+
   list(): ProviderConfigPublic[] {
     return PROVIDERS.map(toPublic);
   },

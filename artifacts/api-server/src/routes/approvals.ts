@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { getWorkflowItems, setWorkflowItems } from "../lib/platform-state.js";
 
 const router = Router();
 
@@ -115,21 +116,23 @@ const APPROVALS: Record<string, unknown>[] = [
 
 router.get("/approvals", (req, res) => {
   const { status } = req.query;
-  let items = [...APPROVALS];
+  const approvals = getWorkflowItems("approvals", APPROVALS);
+  let items = [...approvals];
   if (status && typeof status === "string") {
     items = items.filter((a) => a.status === status);
   }
-  const pending = APPROVALS.filter((a) => a.status === "pending");
-  res.json({ items, total: APPROVALS.length, pendingCount: pending.length });
+  const pending = approvals.filter((a) => a.status === "pending");
+  res.json({ items, total: approvals.length, pendingCount: pending.length });
 });
 
-router.post("/approvals/:id/approve", (req, res) => {
-  const idx = APPROVALS.findIndex((a) => a.id === req.params.id);
+router.post("/approvals/:id/approve", async (req, res, next) => {
+  const approvals = getWorkflowItems("approvals", APPROVALS);
+  const idx = approvals.findIndex((a) => a.id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  const approval = APPROVALS[idx] as { status?: string; expiresAt?: string };
+  const approval = approvals[idx] as { status?: string; expiresAt?: string };
   if (approval.status !== "pending") {
     res.status(409).json({ error: `Cannot approve an approval in '${approval.status ?? "unknown"}' state` });
     return;
@@ -143,23 +146,29 @@ router.post("/approvals/:id/approve", (req, res) => {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  APPROVALS[idx] = {
+  approvals[idx] = {
     ...approval,
     status: "approved",
     decidedAt: new Date().toISOString(),
     decidedBy: body.data.decidedBy ?? "operator",
     reason: body.data.reason,
   };
-  res.json(APPROVALS[idx]);
+  try {
+    await setWorkflowItems("approvals", approvals);
+    res.json(approvals[idx]);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/approvals/:id/reject", (req, res) => {
-  const idx = APPROVALS.findIndex((a) => a.id === req.params.id);
+router.post("/approvals/:id/reject", async (req, res, next) => {
+  const approvals = getWorkflowItems("approvals", APPROVALS);
+  const idx = approvals.findIndex((a) => a.id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "Approval not found" });
     return;
   }
-  const approval = APPROVALS[idx] as { status?: string };
+  const approval = approvals[idx] as { status?: string };
   if (approval.status !== "pending") {
     res.status(409).json({ error: `Cannot reject an approval in '${approval.status ?? "unknown"}' state` });
     return;
@@ -169,14 +178,19 @@ router.post("/approvals/:id/reject", (req, res) => {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  APPROVALS[idx] = {
+  approvals[idx] = {
     ...approval,
     status: "rejected",
     decidedAt: new Date().toISOString(),
     decidedBy: body.data.decidedBy ?? "operator",
     reason: body.data.reason,
   };
-  res.json(APPROVALS[idx]);
+  try {
+    await setWorkflowItems("approvals", approvals);
+    res.json(approvals[idx]);
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

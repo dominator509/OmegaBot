@@ -61,7 +61,14 @@ export default defineConfig({
   },
   preview: {
     port,
+    strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: apiOrigin,
+        changeOrigin: true,
+      },
+    },
   },
 });

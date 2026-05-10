@@ -1,0 +1,15 @@
+export const DEFAULT_SETTINGS: Record<string, unknown> = {
+  systemName: "OmegaBot",
+  defaultLlmModelId: "gpt-4o",
+  requireApprovalForHighRisk: true,
+  approvalTimeoutMinutes: 60,
+  maxConcurrentTasks: 5,
+  maxRetries: 3,
+  retryDelayMs: 5000,
+  stalenessThresholdMs: 3600000,
+  logLevel: "info",
+  enableEventStreaming: true,
+  webhookUrl: "",
+  enableIdempotency: true,
+  version: "0.23.0",
+};
