@@ -30,7 +30,8 @@ import {
   Moon,
   Sun,
   MessageSquare,
-  BrainCircuit
+  BrainCircuit,
+  LogOut
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,11 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const adaptersDegraded = (summary as { adaptersDegraded?: number } | undefined)?.adaptersDegraded ?? 0;
   const version = (settings as { version?: string } | undefined)?.version ?? "0.23.0";
   const isHealthy = adaptersDegraded === 0;
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.reload();
+  }
 
   return (
     <SidebarProvider>
@@ -244,6 +250,15 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
               >
                 {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
                 {theme === "dark" ? "Light Mode" : "Dark Mode"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleLogout()}
+                className="w-full text-xs h-8 gap-2"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
               </Button>
             </div>
           </SidebarFooter>

@@ -1,10 +1,12 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { apiAuthMiddleware } from "./lib/api-auth.js";
+import { requireSession } from "./lib/session-auth.js";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -78,6 +80,7 @@ app.use(
 
 app.use(express.json({ limit: "512kb" }));
 app.use(express.urlencoded({ extended: true, limit: "512kb" }));
+app.use(cookieParser());
 
 app.use("/api", generalLimiter);
 app.use("/api", (req, _res, next) => {
@@ -88,6 +91,7 @@ app.use("/api", (req, _res, next) => {
   }
 });
 app.use("/api", apiAuthMiddleware);
+app.use("/api", requireSession);
 app.use("/api", router);
 
 app.use("/api/*path", (_req: Request, res: Response) => {

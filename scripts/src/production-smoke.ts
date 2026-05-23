@@ -22,6 +22,10 @@ const webPort = Number(process.env.SMOKE_WEB_PORT ?? "18081");
 const apiBase = `http://127.0.0.1:${apiPort}`;
 const webBase = `http://127.0.0.1:${webPort}`;
 const apiAuthToken = process.env.API_AUTH_TOKEN ?? `smoke-token-${process.pid}`;
+const adminUsername = process.env.ADMIN_USERNAME ?? "smoke-admin";
+const adminPassword = process.env.ADMIN_PASSWORD ?? `smoke-password-${process.pid}`;
+const sessionSecret = process.env.SESSION_SECRET ?? `smoke-session-secret-${process.pid}`;
+let sessionCookie = "";
 const webCommand = process.platform === "win32" ? "cmd.exe" : "corepack";
 const webArgs = process.platform === "win32"
   ? ["/d", "/s", "/c", "corepack", "pnpm", "--filter", "@workspace/omegabot", "run", "serve"]
@@ -41,6 +45,9 @@ const services: Service[] = [
       PORT: String(apiPort),
       ALLOWED_ORIGINS: webBase,
       API_AUTH_TOKEN: apiAuthToken,
+      ADMIN_USERNAME: adminUsername,
+      ADMIN_PASSWORD: adminPassword,
+      SESSION_SECRET: sessionSecret,
       OMEGABOT_STATE_FILE: stateFile,
       ALLOW_FILE_STATE_IN_PRODUCTION: "true",
     },
@@ -131,6 +138,7 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
     ...init,
     headers: {
       "content-type": "application/json",
+      ...sessionHeaders(url),
       ...(init?.headers ?? {}),
     },
   });
@@ -144,12 +152,20 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
 }
 
 async function fetchText(url: string): Promise<string> {
-  const response = await fetchWithTimeout(url);
+  const response = await fetchWithTimeout(url, {
+    headers: sessionHeaders(url),
+  });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(`${url} returned ${response.status}: ${text.slice(0, 300)}`);
   }
   return text;
+}
+
+function sessionHeaders(url: string): Record<string, string> {
+  return sessionCookie && url.startsWith(webBase)
+    ? { cookie: sessionCookie }
+    : {};
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 10_000): Promise<Response> {
@@ -195,8 +211,33 @@ async function runChecks(): Promise<void> {
     assert(response.status === 401, `Unauthenticated API request returned ${response.status}, expected 401`);
   });
 
+  await check("api machine token", async () => {
+    await fetchJson(`${apiBase}/api/settings`, {
+      headers: { authorization: `Bearer ${apiAuthToken}` },
+    });
+  });
+
   await check("web proxy health", async () => {
     await waitForJson(`${webBase}/api/healthz`);
+  });
+
+  await check("web session gate", async () => {
+    const response = await fetchWithTimeout(`${webBase}/api/settings`);
+    assert(response.status === 401, `Unauthenticated web API request returned ${response.status}, expected 401`);
+  });
+
+  await check("admin login", async () => {
+    const response = await fetchWithTimeout(`${webBase}/api/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+    });
+    const setCookie = response.headers.get("set-cookie");
+    assert(response.ok, `Login returned ${response.status}`);
+    assert(setCookie, "Login did not set a session cookie");
+    sessionCookie = setCookie.split(";")[0] ?? "";
+    const body = await response.json() as { authenticated?: boolean };
+    assert(body.authenticated === true, "Login did not return authenticated=true");
   });
 
   await check("web app shell", async () => {

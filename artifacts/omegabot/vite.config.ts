@@ -14,14 +14,64 @@ if (Number.isNaN(port) || port <= 0) {
 
 const basePath = process.env.BASE_PATH ?? "/";
 const apiOrigin = process.env.API_ORIGIN ?? "http://127.0.0.1:8080";
-const apiAuthToken = process.env.API_AUTH_TOKEN;
 const apiProxy = {
   target: apiOrigin,
   changeOrigin: true,
-  ...(apiAuthToken
-    ? { headers: { Authorization: `Bearer ${apiAuthToken}` } }
-    : {}),
 };
+
+function manualChunks(id: string) {
+  const normalizedId = id.replace(/\\/g, "/");
+
+  if (!normalizedId.includes("/node_modules/")) {
+    return undefined;
+  }
+
+  if (
+    normalizedId.includes("/node_modules/@radix-ui/")
+    || normalizedId.includes("/node_modules/class-variance-authority/")
+    || normalizedId.includes("/node_modules/cmdk/")
+    || normalizedId.includes("/node_modules/vaul/")
+    || normalizedId.includes("/node_modules/react-day-picker/")
+    || normalizedId.includes("/node_modules/react-hook-form/")
+    || normalizedId.includes("/node_modules/react-resizable-panels/")
+  ) {
+    return "ui-vendor";
+  }
+
+  if (normalizedId.includes("/node_modules/lucide-react/") || normalizedId.includes("/node_modules/react-icons/")) {
+    return "icons-vendor";
+  }
+
+  if (
+    normalizedId.includes("/node_modules/recharts/")
+    || normalizedId.includes("/node_modules/d3-")
+    || normalizedId.includes("/node_modules/victory-vendor/")
+  ) {
+    return "charts-vendor";
+  }
+
+  if (normalizedId.includes("/node_modules/@tanstack/")) {
+    return "query-vendor";
+  }
+
+  if (
+    normalizedId.includes("/node_modules/framer-motion/")
+    || normalizedId.includes("/node_modules/date-fns/")
+    || normalizedId.includes("/node_modules/wouter/")
+  ) {
+    return "app-vendor";
+  }
+
+  if (
+    normalizedId.includes("/node_modules/react/")
+    || normalizedId.includes("/node_modules/react-dom/")
+    || normalizedId.includes("/node_modules/scheduler/")
+  ) {
+    return "react-vendor";
+  }
+
+  return "vendor";
+}
 
 export default defineConfig({
   base: basePath,
@@ -51,6 +101,11 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks,
+      },
+    },
   },
   server: {
     port,

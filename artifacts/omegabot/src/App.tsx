@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
 import StartHere from "@/pages/start-here";
 import Overview from "@/pages/overview";
@@ -65,9 +66,11 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="omega-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
+          <AuthGate>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+          </AuthGate>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

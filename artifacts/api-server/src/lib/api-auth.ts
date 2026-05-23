@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { hasValidSession } from "./session-auth.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -34,7 +35,12 @@ export function validateApiAuthConfig(): void {
 }
 
 export function apiAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
-  if (!isProduction || isAuthDisabled() || req.method === "OPTIONS" || req.path === "/healthz") {
+  if (!isProduction || isAuthDisabled() || req.method === "OPTIONS" || req.path === "/healthz" || req.path.startsWith("/auth/")) {
+    next();
+    return;
+  }
+
+  if (hasValidSession(req)) {
     next();
     return;
   }
@@ -47,5 +53,6 @@ export function apiAuthMiddleware(req: Request, res: Response, next: NextFunctio
     return;
   }
 
+  res.locals.apiAuthenticated = true;
   next();
 }

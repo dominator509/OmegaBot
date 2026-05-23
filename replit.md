@@ -109,6 +109,7 @@ The API server (`artifacts/api-server/src/app.ts`) includes:
 - **`helmet`**: Security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, COOP, etc.)
 - **`express-rate-limit`**: 200 req/min general, 60 req/min for mutations (POST/PATCH/PUT/DELETE). Rate limits only active when `NODE_ENV=production`.
 - **Bearer auth gate**: Production API routes require `Authorization: Bearer $API_AUTH_TOKEN`; `/api/healthz` remains public for health checks. Set `DISABLE_API_AUTH_IN_PRODUCTION=true` only for explicitly trusted deployments behind another auth layer.
+- **Admin session auth**: Production requires `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET`. The dashboard signs in through `/api/auth/login`, stores an HTTP-only session cookie, checks `/api/auth/session`, and signs out through `/api/auth/logout`.
 - **CORS**: Configurable via `ALLOWED_ORIGINS` env var (comma-separated list). Falls back to permissive in development.
 - **Body size limit**: 512kb max for JSON and URL-encoded bodies.
 - **Global error handler**: Returns JSON `{ error: message }` with correct status codes; stack traces hidden in production.
