@@ -14,6 +14,14 @@ if (Number.isNaN(port) || port <= 0) {
 
 const basePath = process.env.BASE_PATH ?? "/";
 const apiOrigin = process.env.API_ORIGIN ?? "http://127.0.0.1:8080";
+const apiAuthToken = process.env.API_AUTH_TOKEN;
+const apiProxy = {
+  target: apiOrigin,
+  changeOrigin: true,
+  ...(apiAuthToken
+    ? { headers: { Authorization: `Bearer ${apiAuthToken}` } }
+    : {}),
+};
 
 export default defineConfig({
   base: basePath,
@@ -50,10 +58,7 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     proxy: {
-      "/api": {
-        target: apiOrigin,
-        changeOrigin: true,
-      },
+      "/api": apiProxy,
     },
     fs: {
       strict: true,
@@ -65,10 +70,7 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     proxy: {
-      "/api": {
-        target: apiOrigin,
-        changeOrigin: true,
-      },
+      "/api": apiProxy,
     },
   },
 });

@@ -21,6 +21,7 @@ const apiPort = Number(process.env.SMOKE_API_PORT ?? "18080");
 const webPort = Number(process.env.SMOKE_WEB_PORT ?? "18081");
 const apiBase = `http://127.0.0.1:${apiPort}`;
 const webBase = `http://127.0.0.1:${webPort}`;
+const apiAuthToken = process.env.API_AUTH_TOKEN ?? `smoke-token-${process.pid}`;
 const webCommand = process.platform === "win32" ? "cmd.exe" : "corepack";
 const webArgs = process.platform === "win32"
   ? ["/d", "/s", "/c", "corepack", "pnpm", "--filter", "@workspace/omegabot", "run", "serve"]
@@ -39,6 +40,7 @@ const services: Service[] = [
       NODE_ENV: "production",
       PORT: String(apiPort),
       ALLOWED_ORIGINS: webBase,
+      API_AUTH_TOKEN: apiAuthToken,
       OMEGABOT_STATE_FILE: stateFile,
       ALLOW_FILE_STATE_IN_PRODUCTION: "true",
     },
@@ -55,6 +57,7 @@ const services: Service[] = [
       PORT: String(webPort),
       BASE_PATH: "/",
       API_ORIGIN: apiBase,
+      API_AUTH_TOKEN: apiAuthToken,
     },
     output: [],
   },
@@ -185,6 +188,11 @@ async function runChecks(): Promise<void> {
   await check("api health", async () => {
     const health = await waitForJson(`${apiBase}/api/healthz`);
     assert((health as { status?: string }).status === "ok", "API health check did not return ok");
+  });
+
+  await check("api auth gate", async () => {
+    const response = await fetchWithTimeout(`${apiBase}/api/settings`);
+    assert(response.status === 401, `Unauthenticated API request returned ${response.status}, expected 401`);
   });
 
   await check("web proxy health", async () => {

@@ -4,6 +4,7 @@ import pg from "pg";
 import { z } from "zod";
 import { DEFAULT_SETTINGS } from "./defaults.js";
 import { DEFAULT_PROVIDERS, type ProviderConfig, providerRegistry } from "./provider-registry.js";
+import { validateApiAuthConfig } from "./api-auth.js";
 import { logger } from "./logger.js";
 
 const { Pool } = pg;
@@ -80,6 +81,8 @@ export function validateProductionConfig(): void {
   if (!isProduction()) {
     return;
   }
+
+  validateApiAuthConfig();
 
   const missing: string[] = [];
   if (!process.env.DATABASE_URL && process.env.ALLOW_FILE_STATE_IN_PRODUCTION !== "true") {

@@ -11,7 +11,7 @@ pnpm workspace monorepo using TypeScript. OmegaBot — a full operator-facing da
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: No DB (in-memory mock data on server)
+- **Database**: Postgres for persisted platform state in production, JSON file fallback for local smoke/dev
 - **Validation**: Zod (import from `zod`, not `zod/v4`)
 - **API codegen**: Orval (from OpenAPI spec in `lib/api-spec/`)
 - **Frontend**: React + Vite, Tailwind CSS v4, shadcn/ui, wouter, TanStack Query, Recharts, Lucide
@@ -65,7 +65,7 @@ Supported providers:
 
 ## API Routes
 
-All routes under `/api/` are in-memory (no DB), served by `artifacts/api-server/src/routes/`:
+Routes under `/api/` are served by `artifacts/api-server/src/routes/`. Mutable platform state persists through `artifacts/api-server/src/lib/platform-state.ts`:
 
 - `GET/POST /api/tasks` · `GET /api/runs`
 - `GET/POST /api/commands` · `GET /api/command-groups`
@@ -108,6 +108,7 @@ All routes under `/api/` are in-memory (no DB), served by `artifacts/api-server/
 The API server (`artifacts/api-server/src/app.ts`) includes:
 - **`helmet`**: Security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, COOP, etc.)
 - **`express-rate-limit`**: 200 req/min general, 60 req/min for mutations (POST/PATCH/PUT/DELETE). Rate limits only active when `NODE_ENV=production`.
+- **Bearer auth gate**: Production API routes require `Authorization: Bearer $API_AUTH_TOKEN`; `/api/healthz` remains public for health checks. Set `DISABLE_API_AUTH_IN_PRODUCTION=true` only for explicitly trusted deployments behind another auth layer.
 - **CORS**: Configurable via `ALLOWED_ORIGINS` env var (comma-separated list). Falls back to permissive in development.
 - **Body size limit**: 512kb max for JSON and URL-encoded bodies.
 - **Global error handler**: Returns JSON `{ error: message }` with correct status codes; stack traces hidden in production.

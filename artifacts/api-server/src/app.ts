@@ -4,6 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import { apiAuthMiddleware } from "./lib/api-auth.js";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -86,6 +87,7 @@ app.use("/api", (req, _res, next) => {
     next();
   }
 });
+app.use("/api", apiAuthMiddleware);
 app.use("/api", router);
 
 app.use("/api/*path", (_req: Request, res: Response) => {
