@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -21,10 +21,11 @@ const apiPort = Number(process.env.SMOKE_API_PORT ?? "18080");
 const webPort = Number(process.env.SMOKE_WEB_PORT ?? "18081");
 const apiBase = `http://127.0.0.1:${apiPort}`;
 const webBase = `http://127.0.0.1:${webPort}`;
-const apiAuthToken = process.env.API_AUTH_TOKEN ?? `smoke-token-${process.pid}`;
+const apiAuthToken = process.env.API_AUTH_TOKEN ?? `smoke-token-${process.pid}-production-auth-check-secret`;
 const adminUsername = process.env.ADMIN_USERNAME ?? "smoke-admin";
 const adminPassword = process.env.ADMIN_PASSWORD ?? `smoke-password-${process.pid}`;
-const sessionSecret = process.env.SESSION_SECRET ?? `smoke-session-secret-${process.pid}`;
+const sessionSecret = process.env.SESSION_SECRET ?? `smoke-session-secret-${process.pid}-signed-cookie-secret`;
+const providerSecretKey = process.env.PROVIDER_SECRET_KEY ?? `smoke-provider-secret-${process.pid}-encrypted-storage-key`;
 let sessionCookie = "";
 const webCommand = process.platform === "win32" ? "cmd.exe" : "corepack";
 const webArgs = process.platform === "win32"
@@ -48,6 +49,7 @@ const services: Service[] = [
       ADMIN_USERNAME: adminUsername,
       ADMIN_PASSWORD: adminPassword,
       SESSION_SECRET: sessionSecret,
+      PROVIDER_SECRET_KEY: providerSecretKey,
       OMEGABOT_STATE_FILE: stateFile,
       ALLOW_FILE_STATE_IN_PRODUCTION: "true",
     },
@@ -163,9 +165,14 @@ async function fetchText(url: string): Promise<string> {
 }
 
 function sessionHeaders(url: string): Record<string, string> {
-  return sessionCookie && url.startsWith(webBase)
-    ? { cookie: sessionCookie }
-    : {};
+  const headers: Record<string, string> = {};
+  if (url.startsWith(webBase)) {
+    headers.origin = webBase;
+  }
+  if (sessionCookie && url.startsWith(webBase)) {
+    headers.cookie = sessionCookie;
+  }
+  return headers;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 10_000): Promise<Response> {
@@ -226,10 +233,19 @@ async function runChecks(): Promise<void> {
     assert(response.status === 401, `Unauthenticated web API request returned ${response.status}, expected 401`);
   });
 
-  await check("admin login", async () => {
+  await check("web mutation origin gate", async () => {
     const response = await fetchWithTimeout(`${webBase}/api/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+    });
+    assert(response.status === 403, `Login without a trusted origin returned ${response.status}, expected 403`);
+  });
+
+  await check("admin login", async () => {
+    const response = await fetchWithTimeout(`${webBase}/api/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: webBase },
       body: JSON.stringify({ username: adminUsername, password: adminPassword }),
     });
     const setCookie = response.headers.get("set-cookie");
@@ -284,6 +300,25 @@ async function runChecks(): Promise<void> {
   await check("api writes through web origin", async () => {
     const taskName = `production smoke ${Date.now()}`;
     persistedTaskName = taskName;
+    const forgedTask = await fetchWithTimeout(`${webBase}/api/tasks`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: sessionCookie,
+        origin: "https://evil.example",
+      },
+      body: JSON.stringify({
+        name: `forged ${taskName}`,
+        description: "Created by production smoke test",
+        priority: "low",
+        adapter: "custom",
+        tags: ["smoke"],
+        idempotencyKey: `forged-${taskName}`,
+        writeSafe: true,
+      }),
+    });
+    assert(forgedTask.status === 403, `Cross-origin session mutation returned ${forgedTask.status}, expected 403`);
+
     const createdTask = await fetchJson(`${webBase}/api/tasks`, {
       method: "POST",
       body: JSON.stringify({
@@ -405,6 +440,14 @@ async function runChecks(): Promise<void> {
     const routeItems = (routes as { items?: Array<{ name?: string }> }).items ?? [];
     assert(routeItems.some((item) => item.name === persistedRouteName), "LLM route did not survive API restart");
   });
+
+  if (!process.env.DATABASE_URL) {
+    await check("provider secrets encrypted at rest", async () => {
+      const persistedState = await readFile(stateFile, "utf8");
+      assert(!persistedState.includes("smoke-secret"), "Provider API key was persisted in plaintext");
+      assert(persistedState.includes("enc:v1:"), "Encrypted provider secret marker was not found in persisted state");
+    });
+  }
 }
 
 async function stopServices(): Promise<void> {

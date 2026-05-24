@@ -4,6 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 const isProduction = process.env.NODE_ENV === "production";
 const sessionCookieName = "omegabot_session";
 const sessionTtlMs = 8 * 60 * 60 * 1000;
+const mutationMethods = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 type Session = {
   id: string;
@@ -21,6 +22,36 @@ function getAdminUsername(): string {
 
 function getAdminPassword(): string | undefined {
   return process.env.ADMIN_PASSWORD;
+}
+
+function getAllowedOrigins(): string[] {
+  return (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function getRequestOrigin(req: Request): string | undefined {
+  const origin = req.header("origin");
+  if (origin) {
+    return origin;
+  }
+
+  const referer = req.header("referer");
+  if (!referer) {
+    return undefined;
+  }
+
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function hasTrustedOrigin(req: Request): boolean {
+  const requestOrigin = getRequestOrigin(req);
+  return Boolean(requestOrigin && getAllowedOrigins().includes(requestOrigin));
 }
 
 function constantTimeEqual(actual: string, expected: string): boolean {
@@ -93,18 +124,33 @@ export function validateSessionAuthConfig(): void {
   }
 
   const missing: string[] = [];
+  const weak: string[] = [];
+  const sessionSecret = getSessionSecret();
+  const adminPassword = getAdminPassword();
+
   if (!getSessionSecret()) {
     missing.push("SESSION_SECRET");
   }
   if (!process.env.ADMIN_USERNAME) {
     missing.push("ADMIN_USERNAME");
   }
-  if (!getAdminPassword()) {
+  if (!adminPassword) {
     missing.push("ADMIN_PASSWORD");
   }
 
   if (missing.length > 0) {
     throw new Error(`Missing required production configuration: ${missing.join(", ")}`);
+  }
+
+  if (sessionSecret && sessionSecret.length < 32) {
+    weak.push("SESSION_SECRET must be at least 32 characters");
+  }
+  if (adminPassword && adminPassword.length < 12) {
+    weak.push("ADMIN_PASSWORD must be at least 12 characters");
+  }
+
+  if (weak.length > 0) {
+    throw new Error(`Weak production configuration: ${weak.join(", ")}`);
   }
 }
 
@@ -124,6 +170,20 @@ export function requireSession(req: Request, res: Response, next: NextFunction):
   }
 
   res.status(401).json({ error: "Unauthorized" });
+}
+
+export function requireTrustedSessionOrigin(req: Request, res: Response, next: NextFunction): void {
+  if (!isProduction || !mutationMethods.has(req.method) || res.locals.apiAuthenticated === true) {
+    next();
+    return;
+  }
+
+  if (hasTrustedOrigin(req)) {
+    next();
+    return;
+  }
+
+  res.status(403).json({ error: "Forbidden" });
 }
 
 export function createSession(username: string, res: Response): { username: string; expiresAt: string } {

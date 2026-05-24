@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS } from "./defaults.js";
 import { DEFAULT_PROVIDERS, type ProviderConfig, providerRegistry } from "./provider-registry.js";
 import { validateApiAuthConfig } from "./api-auth.js";
 import { validateSessionAuthConfig } from "./session-auth.js";
+import { decryptSecret, encryptSecret, validateSecretStoreConfig } from "./secret-store.js";
 import { logger } from "./logger.js";
 
 const { Pool } = pg;
@@ -78,6 +79,34 @@ function mergeState(raw: unknown): PlatformState {
   };
 }
 
+function decryptProviderSecrets(state: PlatformState): PlatformState {
+  return {
+    ...state,
+    providers: state.providers.map((provider) => ({
+      ...provider,
+      apiKey: decryptSecret(provider.apiKey),
+    })),
+  };
+}
+
+function encryptProviderSecrets(state: PlatformState): PlatformState {
+  return {
+    ...state,
+    providers: state.providers.map((provider) => ({
+      ...provider,
+      apiKey: encryptSecret(provider.apiKey),
+    })),
+  };
+}
+
+function loadState(raw: unknown): PlatformState {
+  return decryptProviderSecrets(mergeState(raw));
+}
+
+function storageState(state: PlatformState): PlatformState {
+  return encryptProviderSecrets(state);
+}
+
 export function validateProductionConfig(): void {
   if (!isProduction()) {
     return;
@@ -85,6 +114,7 @@ export function validateProductionConfig(): void {
 
   validateApiAuthConfig();
   validateSessionAuthConfig();
+  validateSecretStoreConfig();
 
   const missing: string[] = [];
   if (!process.env.DATABASE_URL && process.env.ALLOW_FILE_STATE_IN_PRODUCTION !== "true") {
@@ -117,7 +147,7 @@ async function readPostgresState(): Promise<PlatformState | undefined> {
     || Object.keys(workflowState).length > 0;
 
   if (hasState) {
-    return mergeState({
+    return loadState({
       settings: settingsState,
       providers: providersState,
       workflow: workflowState,
@@ -202,7 +232,7 @@ async function readLegacyPostgresState(): Promise<PlatformState | undefined> {
     return undefined;
   }
 
-  return mergeState(result.rows[0]?.value);
+  return loadState(result.rows[0]?.value);
 }
 
 async function readPostgresSettings(): Promise<Record<string, unknown>> {
@@ -308,13 +338,14 @@ async function writePostgresState(state: PlatformState): Promise<void> {
   }
 
   await ensurePostgresSchema();
+  const persistedState = storageState(state);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     await client.query("DELETE FROM omegabot_settings");
-    for (const [key, value] of Object.entries(state.settings)) {
+    for (const [key, value] of Object.entries(persistedState.settings)) {
       await client.query(
         "INSERT INTO omegabot_settings (key, value, updated_at) VALUES ($1, $2::jsonb, now())",
         [key, JSON.stringify(value)],
@@ -323,7 +354,7 @@ async function writePostgresState(state: PlatformState): Promise<void> {
 
     await client.query("DELETE FROM omegabot_provider_models");
     await client.query("DELETE FROM omegabot_providers");
-    for (const provider of state.providers) {
+    for (const provider of persistedState.providers) {
       await client.query(
         `INSERT INTO omegabot_providers
           (id, name, type, base_url, api_key, enabled, created_at, updated_at)
@@ -359,7 +390,7 @@ async function writePostgresState(state: PlatformState): Promise<void> {
 
     for (const [key, table] of Object.entries(WORKFLOW_TABLES) as Array<[WorkflowKey, string]>) {
       await client.query(`DELETE FROM ${table}`);
-      const items = state.workflow[key] ?? [];
+      const items = persistedState.workflow[key] ?? [];
       for (const item of items) {
         await client.query(
           `INSERT INTO ${table} (id, payload, updated_at) VALUES ($1, $2::jsonb, now())`,
@@ -379,7 +410,7 @@ async function writePostgresState(state: PlatformState): Promise<void> {
 
 async function readFileState(): Promise<PlatformState | undefined> {
   try {
-    return mergeState(JSON.parse(await readFile(stateFilePath, "utf8")));
+    return loadState(JSON.parse(await readFile(stateFilePath, "utf8")));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return undefined;
@@ -390,7 +421,7 @@ async function readFileState(): Promise<PlatformState | undefined> {
 
 async function writeFileState(state: PlatformState): Promise<void> {
   await mkdir(path.dirname(stateFilePath), { recursive: true });
-  await writeFile(stateFilePath, `${JSON.stringify(state, null, 2)}\n`);
+  await writeFile(stateFilePath, `${JSON.stringify(storageState(state), null, 2)}\n`);
 }
 
 function currentState(): PlatformState {

@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { apiAuthMiddleware } from "./lib/api-auth.js";
-import { requireSession } from "./lib/session-auth.js";
+import { requireSession, requireTrustedSessionOrigin } from "./lib/session-auth.js";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -92,6 +92,7 @@ app.use("/api", (req, _res, next) => {
 });
 app.use("/api", apiAuthMiddleware);
 app.use("/api", requireSession);
+app.use("/api", requireTrustedSessionOrigin);
 app.use("/api", router);
 
 app.use("/api/*path", (_req: Request, res: Response) => {
