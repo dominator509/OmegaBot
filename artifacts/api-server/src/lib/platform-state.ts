@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import pg from "pg";
 import { z } from "zod";
@@ -55,6 +55,7 @@ let workflow: Partial<Record<WorkflowKey, Record<string, unknown>[]>> = {};
 let pool: pg.Pool | undefined;
 let storage: "postgres" | "file" | "memory" = "memory";
 let stateFilePath = "";
+let persistQueue: Promise<void> = Promise.resolve();
 
 function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
@@ -415,6 +416,22 @@ async function readFileState(): Promise<PlatformState | undefined> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return undefined;
     }
+    if (error instanceof SyntaxError) {
+      const backupPath = `${stateFilePath}.corrupt-${Date.now()}`;
+      try {
+        await copyFile(stateFilePath, backupPath);
+        logger.error(
+          { err: error, stateFilePath, backupPath },
+          "State file is malformed JSON; backing up corrupted file and reinitializing from defaults",
+        );
+      } catch (backupError) {
+        logger.error(
+          { err: error, backupErr: backupError, stateFilePath },
+          "State file is malformed JSON and backup failed; reinitializing from defaults",
+        );
+      }
+      return undefined;
+    }
     throw error;
   }
 }
@@ -479,7 +496,7 @@ function cloneItems(items: Record<string, unknown>[]): Record<string, unknown>[]
 export function getWorkflowItems(key: WorkflowKey, defaults: Record<string, unknown>[]): Record<string, unknown>[] {
   const items = workflow[key];
   if (items) {
-    return items;
+    return cloneItems(items);
   }
   return cloneItems(defaults);
 }
@@ -490,18 +507,27 @@ export async function setWorkflowItems(key: WorkflowKey, items: Record<string, u
     [key]: cloneItems(items),
   };
   await persistPlatformState();
-  return workflow[key] ?? [];
+  return cloneItems(workflow[key] ?? []);
+}
+
+function enqueuePersist(task: () => Promise<void>): Promise<void> {
+  const run = persistQueue.then(task, task);
+  persistQueue = run.catch(() => undefined);
+  return run;
 }
 
 export async function persistPlatformState(): Promise<void> {
-  const state = currentState();
-  if (storage === "postgres") {
-    await writePostgresState(state);
-    return;
-  }
-  await writeFileState(state);
+  await enqueuePersist(async () => {
+    const state = currentState();
+    if (storage === "postgres") {
+      await writePostgresState(state);
+      return;
+    }
+    await writeFileState(state);
+  });
 }
 
 export async function closePlatformState(): Promise<void> {
+  await persistQueue;
   await pool?.end();
 }
