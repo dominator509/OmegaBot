@@ -1,0 +1,57 @@
+[
+  {
+    "vector": "p3-01-concurrent-settings",
+    "hypothesis": "Rapid settings writes may produce 5xx or state lockups.",
+    "observed": "no-5xx",
+    "details": {
+      "statusHistogram": {
+        "200": 60
+      }
+    }
+  },
+  {
+    "vector": "p3-02-conflicting-approval-race",
+    "hypothesis": "Concurrent state transitions may both succeed and corrupt approval state.",
+    "observed": "single-winner",
+    "details": {
+      "decisionStatuses": [
+        200,
+        409
+      ]
+    }
+  },
+  {
+    "vector": "p3-03-mid-flight-abort",
+    "hypothesis": "Dropped connection mid-transaction may leave inconsistent state or crash route handling.",
+    "observed": "client-aborted",
+    "details": {
+      "abortResult": "client-aborted"
+    }
+  },
+  {
+    "vector": "p3-04-timeout-interruption",
+    "hypothesis": "Timeout/interruption should not crash process or poison future requests.",
+    "observed": "completed-before-timeout",
+    "details": {
+      "timeoutStatus": "completed-before-timeout"
+    }
+  },
+  {
+    "vector": "p3-05-secret-flip-race",
+    "hypothesis": "Removing encryption secret during concurrent writes should surface controlled failure, not process crash.",
+    "observed": "no-5xx",
+    "details": {
+      "statusHistogram": {
+        "200": 24
+      }
+    }
+  },
+  {
+    "vector": "p3-06-post-chaos-health",
+    "hypothesis": "Service remains responsive after disruption campaign.",
+    "observed": "healthy",
+    "details": {
+      "health": 200
+    }
+  }
+]
