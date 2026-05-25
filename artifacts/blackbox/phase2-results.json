@@ -1,0 +1,103 @@
+[
+  {
+    "id": "P2-TASK-VALID",
+    "phase": 2,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 201,
+    "ok": true,
+    "expected": [
+      201
+    ],
+    "durationMs": 23
+  },
+  {
+    "id": "P2-TASK-MISSING-NAME",
+    "phase": 2,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 400,
+    "ok": true,
+    "expected": [
+      400
+    ],
+    "durationMs": 7
+  },
+  {
+    "id": "P2-TASK-EMPTY-NAME",
+    "phase": 2,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 201,
+    "ok": true,
+    "expected": [
+      400,
+      201
+    ],
+    "notes": "boundary min length not declared for CreateTaskBody.name",
+    "durationMs": 7
+  },
+  {
+    "id": "P2-TASK-LONG-NAME",
+    "phase": 2,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 201,
+    "ok": true,
+    "expected": [
+      201,
+      400,
+      413
+    ],
+    "durationMs": 6
+  },
+  {
+    "id": "P2-CMD-VALID",
+    "phase": 2,
+    "endpoint": "/commands",
+    "method": "POST",
+    "status": 201,
+    "ok": true,
+    "expected": [
+      201
+    ],
+    "durationMs": 7
+  },
+  {
+    "id": "P2-CMD-BAD-TYPE",
+    "phase": 2,
+    "endpoint": "/commands",
+    "method": "POST",
+    "status": 201,
+    "ok": true,
+    "expected": [
+      400,
+      201
+    ],
+    "durationMs": 12
+  },
+  {
+    "id": "P2-SETTINGS-TYPE-MISMATCH",
+    "phase": 2,
+    "endpoint": "/settings",
+    "method": "PATCH",
+    "status": 400,
+    "ok": true,
+    "expected": [
+      400
+    ],
+    "durationMs": 6
+  },
+  {
+    "id": "P2-CHANGEPLAN-MISSING-REPO",
+    "phase": 2,
+    "endpoint": "/github/change-plans",
+    "method": "POST",
+    "status": 400,
+    "ok": true,
+    "expected": [
+      400
+    ],
+    "durationMs": 5
+  }
+]
