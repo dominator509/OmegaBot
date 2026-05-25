@@ -1,0 +1,56 @@
+[
+  {
+    "id": "p2-01",
+    "hypothesis": "Type mismatch in strongly typed settings path should be rejected with 4xx, not crash.",
+    "endpoint": "/settings",
+    "method": "PATCH",
+    "status": 400,
+    "responseSnippet": "{\"error\":\"[\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"received\\\": \\\"string\\\",\\n    \\\"path\\\": [\\n      \\\"maxRetries\\\"\\n    ],\\n    \\\"message\\\": \\\"Expected number, received string\\\"\\n  }\\n]\"}",
+    "graceful": true
+  },
+  {
+    "id": "p2-02",
+    "hypothesis": "Deeply nested task payload should reject or gracefully bound parse.",
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 201,
+    "responseSnippet": "{\"id\":\"task-1779709153419\",\"name\":\"deep-task\",\"description\":\"x\",\"status\":\"pending\",\"priority\":\"medium\",\"adapter\":\"custom\",\"createdAt\":\"2026-05-25T11:39:13.419Z\",\"updatedAt\":\"2026-05-25T11:39:13.419Z\",\"runCount\":0,\"tags\":[],\"writeSafe\":false",
+    "graceful": true
+  },
+  {
+    "id": "p2-03",
+    "hypothesis": "Oversized string body should be bounded by parser limit and not exhaust memory.",
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 413,
+    "responseSnippet": "{\"error\":\"request entity too large\"}",
+    "graceful": true
+  },
+  {
+    "id": "p2-04",
+    "hypothesis": "Massive integer model metadata should fail validation safely.",
+    "endpoint": "/providers/mal-int/models",
+    "method": "POST",
+    "status": 404,
+    "responseSnippet": "{\"error\":\"Provider not found\"}",
+    "graceful": true
+  },
+  {
+    "id": "p2-05",
+    "hypothesis": "Malformed llm route body with null target should reject with 4xx.",
+    "endpoint": "/llm/routes",
+    "method": "POST",
+    "status": 400,
+    "responseSnippet": "{\"error\":\"[\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"received\\\": \\\"null\\\",\\n    \\\"path\\\": [\\n      \\\"targetModelId\\\"\\n    ],\\n    \\\"message\\\": \\\"Expected string, received null\\\"\\n  }\\n]\"}",
+    "graceful": true
+  },
+  {
+    "id": "p2-06",
+    "hypothesis": "Control endpoint unknown action should reject without stack leakage.",
+    "endpoint": "/control",
+    "method": "POST",
+    "status": 400,
+    "responseSnippet": "{\"error\":\"Invalid control request\",\"details\":{\"formErrors\":[],\"fieldErrors\":{\"action\":[\"Invalid enum value. Expected 'assistant_response' | 'approve' | 'reject' | 'create_task' | 'update_task' | 'run_task' | 'send_message', received 'drop_d",
+    "graceful": true
+  }
+]
