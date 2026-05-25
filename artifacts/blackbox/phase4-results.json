@@ -1,0 +1,58 @@
+[
+  {
+    "id": "P4-MALFORMED-JSON",
+    "phase": 4,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 400,
+    "ok": true,
+    "expected": [
+      400
+    ],
+    "leak": false,
+    "durationMs": 0
+  },
+  {
+    "id": "P4-CONTENT-TYPE-MISMATCH",
+    "phase": 4,
+    "endpoint": "/tasks",
+    "method": "POST",
+    "status": 400,
+    "ok": true,
+    "expected": [
+      400,
+      415
+    ],
+    "leak": false,
+    "durationMs": 0
+  },
+  {
+    "id": "P4-UNAUTHORIZED-TOKEN",
+    "phase": 4,
+    "endpoint": "/tasks",
+    "method": "GET",
+    "status": 200,
+    "ok": true,
+    "expected": [
+      200,
+      401,
+      403
+    ],
+    "notes": "Environment-dependent auth policy",
+    "durationMs": 5
+  },
+  {
+    "id": "P4-OUT-OF-SEQUENCE-WORKFLOW",
+    "phase": 4,
+    "endpoint": "/approvals/nonexistent-approval-id/approve",
+    "method": "POST",
+    "status": 404,
+    "ok": true,
+    "expected": [
+      404,
+      409
+    ],
+    "leak": false,
+    "durationMs": 5
+  }
+]
