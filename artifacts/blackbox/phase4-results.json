@@ -39,7 +39,7 @@
       403
     ],
     "notes": "Environment-dependent auth policy",
-    "durationMs": 5
+    "durationMs": 1
   },
   {
     "id": "P4-OUT-OF-SEQUENCE-WORKFLOW",
@@ -53,6 +53,6 @@
       409
     ],
     "leak": false,
-    "durationMs": 5
+    "durationMs": 2
   }
 ]

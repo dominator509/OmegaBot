@@ -9,7 +9,7 @@
     "expected": [
       201
     ],
-    "durationMs": 23
+    "durationMs": 16
   },
   {
     "id": "P2-TASK-MISSING-NAME",
@@ -21,7 +21,7 @@
     "expected": [
       400
     ],
-    "durationMs": 7
+    "durationMs": 5
   },
   {
     "id": "P2-TASK-EMPTY-NAME",
@@ -35,7 +35,7 @@
       201
     ],
     "notes": "boundary min length not declared for CreateTaskBody.name",
-    "durationMs": 7
+    "durationMs": 5
   },
   {
     "id": "P2-TASK-LONG-NAME",
@@ -49,7 +49,7 @@
       400,
       413
     ],
-    "durationMs": 6
+    "durationMs": 5
   },
   {
     "id": "P2-CMD-VALID",
@@ -61,7 +61,7 @@
     "expected": [
       201
     ],
-    "durationMs": 7
+    "durationMs": 5
   },
   {
     "id": "P2-CMD-BAD-TYPE",
@@ -74,7 +74,7 @@
       400,
       201
     ],
-    "durationMs": 12
+    "durationMs": 5
   },
   {
     "id": "P2-SETTINGS-TYPE-MISMATCH",
@@ -86,7 +86,7 @@
     "expected": [
       400
     ],
-    "durationMs": 6
+    "durationMs": 3
   },
   {
     "id": "P2-CHANGEPLAN-MISSING-REPO",
@@ -98,6 +98,6 @@
     "expected": [
       400
     ],
-    "durationMs": 5
+    "durationMs": 3
   }
 ]

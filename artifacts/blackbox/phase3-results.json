@@ -9,19 +9,19 @@
     "expected": [
       201
     ],
-    "durationMs": 23
+    "durationMs": 5
   },
   {
     "id": "P3-WF-GET-TASK",
     "phase": 3,
-    "endpoint": "/tasks/task-1779711516044",
+    "endpoint": "/tasks/task-1779711616442",
     "method": "GET",
     "status": 200,
     "ok": true,
     "expected": [
       200
     ],
-    "durationMs": 5
+    "durationMs": 2
   },
   {
     "id": "P3-WF-LIST-TASKS",
@@ -33,18 +33,18 @@
     "expected": [
       200
     ],
-    "durationMs": 4
+    "durationMs": 3
   },
   {
     "id": "P3-WF-TASK-RUNS",
     "phase": 3,
-    "endpoint": "/tasks/task-1779711516044/runs",
+    "endpoint": "/tasks/task-1779711616442/runs",
     "method": "GET",
     "status": 200,
     "ok": true,
     "expected": [
       200
     ],
-    "durationMs": 3
+    "durationMs": 1
   }
 ]

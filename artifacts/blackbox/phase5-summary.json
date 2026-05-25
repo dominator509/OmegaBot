@@ -1,0 +1,8 @@
+{
+  "documentedEndpoints": 33,
+  "coveredEndpoints": 4,
+  "coveragePct": "12.12",
+  "totalChecks": 16,
+  "failed": 0,
+  "leakageFindings": 0
+}
