@@ -1,0 +1,54 @@
+[
+  {
+    "vector": "p4-01-mutate-without-auth",
+    "hypothesis": "Mutation before initialization/auth should be blocked.",
+    "observed": "blocked-401",
+    "details": {
+      "status": 401
+    }
+  },
+  {
+    "vector": "p4-02-login",
+    "hypothesis": "Valid operator credentials should issue session cookie.",
+    "observed": "cookie-issued",
+    "details": {
+      "status": 200,
+      "hasCookie": true
+    }
+  },
+  {
+    "vector": "p4-03-session-mutate-no-origin",
+    "hypothesis": "Authenticated session mutation without trusted origin should be denied.",
+    "observed": "blocked-403",
+    "details": {
+      "status": 403
+    }
+  },
+  {
+    "vector": "p4-04-session-mutate-trusted-origin",
+    "hypothesis": "Trusted-origin mutation should succeed with valid session.",
+    "observed": "allowed-200",
+    "details": {
+      "status": 200
+    }
+  },
+  {
+    "vector": "p4-05-stale-cookie-reuse-after-logout",
+    "hypothesis": "Captured pre-logout cookie should be invalid after logout.",
+    "observed": "reused-session-still-authorized",
+    "details": {
+      "logoutStatus": 200,
+      "sessionStatus": 200,
+      "authenticatedAfterLogout": true,
+      "mutationStatusAfterLogout": 200
+    }
+  },
+  {
+    "vector": "p4-06-api-token-path",
+    "hypothesis": "Machine-token mutation should work without session origin checks.",
+    "observed": "allowed-200",
+    "details": {
+      "status": 200
+    }
+  }
+]
