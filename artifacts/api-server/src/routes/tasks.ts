@@ -114,7 +114,7 @@ router.get("/tasks", (req, res) => {
 });
 
 router.post("/tasks", async (req, res, next) => {
-  const body = CreateTaskBody.safeParse(req.body);
+  const body = CreateTaskBody.strict().safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;

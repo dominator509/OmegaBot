@@ -5,6 +5,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const sessionCookieName = "omegabot_session";
 const sessionTtlMs = 8 * 60 * 60 * 1000;
 const mutationMethods = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+const revokedSessionIds = new Map<string, number>();
 
 type Session = {
   id: string;
@@ -104,6 +105,22 @@ function decodeSessionCookie(value: string | undefined): Session | undefined {
   }
 }
 
+function revokeSession(session: Session): void {
+  revokedSessionIds.set(session.id, session.expiresAt);
+}
+
+function isRevokedSession(session: Session): boolean {
+  const expiresAt = revokedSessionIds.get(session.id);
+  if (!expiresAt) {
+    return false;
+  }
+  if (expiresAt <= Date.now()) {
+    revokedSessionIds.delete(session.id);
+    return false;
+  }
+  return true;
+}
+
 function getSession(req: Request): Session | undefined {
   const signedSession = (req.cookies as Record<string, string | undefined> | undefined)?.[sessionCookieName];
   const session = decodeSessionCookie(signedSession);
@@ -112,6 +129,9 @@ function getSession(req: Request): Session | undefined {
   }
 
   if (session.expiresAt <= Date.now()) {
+    return undefined;
+  }
+  if (isRevokedSession(session)) {
     return undefined;
   }
 
@@ -206,7 +226,11 @@ export function createSession(username: string, res: Response): { username: stri
   };
 }
 
-export function clearSession(_req: Request, res: Response): void {
+export function clearSession(req: Request, res: Response): void {
+  const session = getSession(req);
+  if (session) {
+    revokeSession(session);
+  }
   res.clearCookie(sessionCookieName, { path: "/" });
 }
 

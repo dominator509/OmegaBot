@@ -1,64 +1,37 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { useLogin, useGetAuthSession } from "@workspace/api-client-react";
 import { LogIn, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type SessionResponse = {
-  authenticated: boolean;
-  user?: {
-    username: string;
-    expiresAt: string;
-  };
-};
-
-async function readSession(): Promise<SessionResponse> {
-  const response = await fetch("/api/auth/session");
-  if (!response.ok) {
-    return { authenticated: false };
-  }
-  return response.json() as Promise<SessionResponse>;
-}
-
 export function AuthGate({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<SessionResponse | undefined>();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    void readSession().then(setSession);
-  }, []);
+  const sessionQuery = useGetAuthSession({
+    query: { queryKey: ["auth-session"], retry: false },
+  });
+  const loginMutation = useLogin();
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
     setError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await response.json() as SessionResponse & { error?: string };
-      if (!response.ok) {
-        setError(data.error ?? "Sign in failed");
-        return;
-      }
-      setSession(data);
-    } finally {
-      setIsSubmitting(false);
+      await loginMutation.mutateAsync({ data: { username, password } });
+      await sessionQuery.refetch();
+    } catch {
+      setError("Invalid username or password");
     }
   }
 
-  if (session === undefined) {
+  if (sessionQuery.isLoading) {
     return null;
   }
 
-  if (session.authenticated) {
+  if (sessionQuery.data?.authenticated) {
     return children;
   }
 
@@ -93,9 +66,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
               />
             </div>
             {error ? <div className="text-sm text-destructive">{error}</div> : null}
-            <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+            <Button type="submit" className="w-full gap-2" disabled={loginMutation.isPending}>
               <LogIn className="h-4 w-4" />
-              {isSubmitting ? "Signing in" : "Sign in"}
+              {loginMutation.isPending ? "Signing in" : "Sign in"}
             </Button>
           </form>
         </CardContent>

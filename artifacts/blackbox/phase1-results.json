@@ -1,0 +1,137 @@
+{
+  "endpointCount": 33,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/healthz"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/session"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks"
+    },
+    {
+      "method": "POST",
+      "path": "/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks/{id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/tasks/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks/{id}/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/commands"
+    },
+    {
+      "method": "POST",
+      "path": "/commands"
+    },
+    {
+      "method": "GET",
+      "path": "/commands/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/command-groups"
+    },
+    {
+      "method": "POST",
+      "path": "/command-groups"
+    },
+    {
+      "method": "GET",
+      "path": "/approvals"
+    },
+    {
+      "method": "POST",
+      "path": "/approvals/{id}/approve"
+    },
+    {
+      "method": "POST",
+      "path": "/approvals/{id}/reject"
+    },
+    {
+      "method": "GET",
+      "path": "/events"
+    },
+    {
+      "method": "GET",
+      "path": "/adapters"
+    },
+    {
+      "method": "GET",
+      "path": "/adapters/{id}/health"
+    },
+    {
+      "method": "GET",
+      "path": "/llm/models"
+    },
+    {
+      "method": "GET",
+      "path": "/llm/routes"
+    },
+    {
+      "method": "POST",
+      "path": "/llm/routes"
+    },
+    {
+      "method": "GET",
+      "path": "/llm/usage"
+    },
+    {
+      "method": "GET",
+      "path": "/integrations"
+    },
+    {
+      "method": "GET",
+      "path": "/github/change-plans"
+    },
+    {
+      "method": "POST",
+      "path": "/github/change-plans"
+    },
+    {
+      "method": "GET",
+      "path": "/github/change-plans/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/artifacts"
+    },
+    {
+      "method": "GET",
+      "path": "/settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/settings"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/summary"
+    }
+  ]
+}

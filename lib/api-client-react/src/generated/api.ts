@@ -23,6 +23,7 @@ import type {
   ApprovalDecisionBody,
   ApprovalList,
   ArtifactStoreList,
+  AuthSessionResponse,
   ChangePlan,
   ChangePlanList,
   Command,
@@ -47,6 +48,8 @@ import type {
   LlmRoute,
   LlmRouteList,
   LlmUsage,
+  LoginBody,
+  LogoutResponse,
   OverviewSummary,
   RunList,
   Settings,
@@ -139,6 +142,248 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get current admin session
+ */
+export const getGetAuthSessionUrl = () => {
+  return `/api/auth/session`;
+};
+
+export const getAuthSession = async (
+  options?: RequestInit,
+): Promise<AuthSessionResponse> => {
+  return customFetch<AuthSessionResponse>(getGetAuthSessionUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAuthSessionQueryKey = () => {
+  return [`/api/auth/session`] as const;
+};
+
+export const getGetAuthSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAuthSessionQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthSession>>> = ({
+    signal,
+  }) => getAuthSession({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthSession>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuthSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuthSession>>
+>;
+export type GetAuthSessionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current admin session
+ */
+
+export function useGetAuthSession<
+  TData = Awaited<ReturnType<typeof getAuthSession>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuthSessionQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Sign in as an admin
+ */
+export const getLoginUrl = () => {
+  return `/api/auth/login`;
+};
+
+export const login = async (
+  loginBody: LoginBody,
+  options?: RequestInit,
+): Promise<AuthSessionResponse> => {
+  return customFetch<AuthSessionResponse>(getLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loginBody),
+  });
+};
+
+export const getLoginMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginBody> },
+  TContext
+> => {
+  const mutationKey = ["login"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof login>>,
+    { data: BodyType<LoginBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return login(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof login>>
+>;
+export type LoginMutationBody = BodyType<LoginBody>;
+export type LoginMutationError = ErrorType<void>;
+
+/**
+ * @summary Sign in as an admin
+ */
+export const useLogin = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginBody> },
+  TContext
+> => {
+  return useMutation(getLoginMutationOptions(options));
+};
+
+/**
+ * @summary Sign out of the current admin session
+ */
+export const getLogoutUrl = () => {
+  return `/api/auth/logout`;
+};
+
+export const logout = async (
+  options?: RequestInit,
+): Promise<LogoutResponse> => {
+  return customFetch<LogoutResponse>(getLogoutUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLogoutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof logout>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["logout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof logout>>,
+    void
+  > = () => {
+    return logout(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LogoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof logout>>
+>;
+
+export type LogoutMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Sign out of the current admin session
+ */
+export const useLogout = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof logout>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getLogoutMutationOptions(options));
+};
 
 /**
  * @summary List all tasks

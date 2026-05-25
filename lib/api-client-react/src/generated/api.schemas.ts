@@ -9,6 +9,27 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface AuthUser {
+  username: string;
+  expiresAt: string;
+}
+
+export interface AuthSessionResponse {
+  authenticated: boolean;
+  user?: AuthUser;
+}
+
+export interface LoginBody {
+  /** @minLength 1 */
+  username: string;
+  /** @minLength 1 */
+  password: string;
+}
+
+export interface LogoutResponse {
+  authenticated: boolean;
+}
+
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
 export const TaskStatus = {

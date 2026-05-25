@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Admin authentication and session operations
   - name: tasks
     description: Task management
   - name: runs
@@ -45,6 +47,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Get current admin session
+      responses:
+        "200":
+          description: Current authentication state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in as an admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "400":
+          description: Invalid login request
+        "401":
+          description: Invalid username or password
+        "403":
+          description: Request did not come from a trusted origin
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Sign out of the current admin session
+      responses:
+        "200":
+          description: Session cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
 
   /tasks:
     get:
@@ -578,6 +631,42 @@ components:
         status:
           type: string
       required: [status]
+
+    AuthUser:
+      type: object
+      properties:
+        username:
+          type: string
+        expiresAt:
+          type: string
+      required: [username, expiresAt]
+
+    AuthSessionResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required: [authenticated]
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required: [username, password]
+
+    LogoutResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+      required: [authenticated]
 
     Task:
       type: object

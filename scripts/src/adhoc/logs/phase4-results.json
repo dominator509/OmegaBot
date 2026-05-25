@@ -35,12 +35,12 @@
   {
     "vector": "p4-05-stale-cookie-reuse-after-logout",
     "hypothesis": "Captured pre-logout cookie should be invalid after logout.",
-    "observed": "reused-session-still-authorized",
+    "observed": "revoked",
     "details": {
       "logoutStatus": 200,
       "sessionStatus": 200,
-      "authenticatedAfterLogout": true,
-      "mutationStatusAfterLogout": 200
+      "authenticatedAfterLogout": false,
+      "mutationStatusAfterLogout": 401
     }
   },
   {

@@ -15,6 +15,45 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Get current admin session
+ */
+export const GetAuthSessionResponse = zod.object({
+  authenticated: zod.boolean(),
+  user: zod
+    .object({
+      username: zod.string(),
+      expiresAt: zod.string(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Sign in as an admin
+ */
+
+export const LoginBody = zod.object({
+  username: zod.string().min(1),
+  password: zod.string().min(1),
+});
+
+export const LoginResponse = zod.object({
+  authenticated: zod.boolean(),
+  user: zod
+    .object({
+      username: zod.string(),
+      expiresAt: zod.string(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Sign out of the current admin session
+ */
+export const LogoutResponse = zod.object({
+  authenticated: zod.boolean(),
+});
+
+/**
  * @summary List all tasks
  */
 export const listTasksQueryLimitDefault = 50;

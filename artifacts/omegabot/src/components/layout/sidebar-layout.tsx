@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { useGetOverviewSummary, useGetSettings } from "@workspace/api-client-react";
+import { logout, useGetOverviewSummary, useGetSettings } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 export function SidebarLayout({ children }: { children: ReactNode }) {
@@ -57,7 +57,7 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const isHealthy = adaptersDegraded === 0;
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await logout();
     window.location.reload();
   }
 
