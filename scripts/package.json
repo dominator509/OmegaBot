@@ -6,7 +6,8 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "smoke": "tsx ./src/production-smoke.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "functional:test": "node --import tsx --test \"./src/tests/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "catalog:",
