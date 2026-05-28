@@ -24,12 +24,13 @@ pnpm workspace monorepo using TypeScript. OmegaBot — a full operator-facing da
 | API Server | `artifacts/api-server` | `/api` | `$PORT` (8080) |
 | OmegaBot Web | `artifacts/omegabot` | `/` | `$PORT` (25662) |
 
-## Pages (13 screens)
+## Pages (14 screens)
 
 | Route | Component | Description |
 |---|---|---|
 | `/` | `start-here.tsx` | Landing / handoff with live stats, concept cards, quick nav |
 | `/overview` | `overview.tsx` | Dashboard with run trend chart, tasks-by-status donut, recent activity |
+| `/chat` | `chat.tsx` | Streaming assistant chat with controlled action handoff |
 | `/tasks` | `tasks.tsx` | Expandable task table with runs, tags, create dialog |
 | `/commands` | `commands.tsx` | Command table + command groups sidebar, expandable payload/result |
 | `/approvals` | `approvals.tsx` | Tabbed view (pending/approved/rejected/expired), approve/reject dialogs |
@@ -68,12 +69,13 @@ Supported providers:
 Routes under `/api/` are served by `artifacts/api-server/src/routes/`. Mutable platform state persists through `artifacts/api-server/src/lib/platform-state.ts`:
 
 - `GET/POST /api/tasks` · `GET /api/runs`
-- `GET/POST /api/commands` · `GET /api/command-groups`
+- `GET/POST /api/commands` · `GET/POST /api/command-groups`
 - `GET /api/approvals` · `POST /api/approvals/:id/approve|reject`
 - `GET /api/events`
 - `GET /api/adapters`
-- `GET /api/providers` · `GET/PATCH /api/providers/:id` · `DELETE /api/providers/:id`
+- `GET /api/providers` · `GET/PUT/PATCH/DELETE /api/providers/:id`
 - `POST /api/providers/:id/test` · `POST /api/providers/:id/models` · `DELETE /api/providers/:id/models/:modelId`
+- `POST /api/chat` · `POST /api/control`
 - `GET /api/llm/models` · `GET/POST /api/llm/routes` · `PATCH/DELETE /api/llm/routes/:id` · `GET /api/llm/usage`
 - `GET /api/integrations`
 - `GET/POST /api/github/change-plans`
@@ -84,7 +86,7 @@ Routes under `/api/` are served by `artifacts/api-server/src/routes/`. Mutable p
 
 ## Key Files
 
-- `artifacts/omegabot/src/App.tsx` — routing + all 12 page imports + QueryClient config + ErrorBoundary
+- `artifacts/omegabot/src/App.tsx` — routing + all 14 page imports + QueryClient config + ErrorBoundary
 - `artifacts/omegabot/src/components/error-boundary.tsx` — React Error Boundary (class component)
 - `artifacts/omegabot/src/components/page-skeleton.tsx` — PageSkeleton, CardGridSkeleton, StatsSkeleton
 - `artifacts/omegabot/src/components/layout/sidebar-layout.tsx` — sidebar nav with live data hooks

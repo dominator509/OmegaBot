@@ -412,6 +412,27 @@ export interface CreateLlmRouteBody {
   enabled?: boolean;
 }
 
+export interface UpdateLlmRouteBody {
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  name?: string;
+  /**
+   * @minLength 1
+   * @maxLength 1024
+   */
+  condition?: string;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  targetModelId?: string;
+  /** @minimum 1 */
+  priority?: number;
+  enabled?: boolean;
+}
+
 export type LlmUsageByModelItem = {
   modelId: string;
   modelName: string;
@@ -429,6 +450,187 @@ export interface LlmUsage {
   byModel: LlmUsageByModelItem[];
   last24hTokens?: number;
   last7dTokens?: number;
+}
+
+export interface ProviderModel {
+  id: string;
+  name: string;
+  contextWindow: number;
+  capabilities: string[];
+  costPer1kTokens: number;
+  avgLatencyMs: number;
+}
+
+export type ProviderType = (typeof ProviderType)[keyof typeof ProviderType];
+
+export const ProviderType = {
+  "openai-compat": "openai-compat",
+  anthropic: "anthropic",
+} as const;
+
+export interface Provider {
+  id: string;
+  name: string;
+  type: ProviderType;
+  baseUrl: string;
+  /** Masked key value; plaintext keys are never returned. */
+  apiKey: string;
+  hasApiKey: boolean;
+  enabled: boolean;
+  models: ProviderModel[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProviderList {
+  items: Provider[];
+  total: number;
+}
+
+export interface ProviderModelBody {
+  /** @minLength 1 */
+  id: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  contextWindow?: number;
+  capabilities?: string[];
+  /** @minimum 0 */
+  costPer1kTokens?: number;
+  /** @minimum 1 */
+  avgLatencyMs?: number;
+}
+
+export type UpsertProviderBodyType =
+  (typeof UpsertProviderBodyType)[keyof typeof UpsertProviderBodyType];
+
+export const UpsertProviderBodyType = {
+  "openai-compat": "openai-compat",
+  anthropic: "anthropic",
+} as const;
+
+export interface UpsertProviderBody {
+  /**
+   * Ignored in favor of the path ID when sent.
+   * @minLength 1
+   * @maxLength 64
+   */
+  id?: string;
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  name: string;
+  type?: UpsertProviderBodyType;
+  baseUrl?: string;
+  apiKey?: string;
+  enabled?: boolean;
+  models?: ProviderModel[];
+}
+
+export type UpdateProviderBodyType =
+  (typeof UpdateProviderBodyType)[keyof typeof UpdateProviderBodyType];
+
+export const UpdateProviderBodyType = {
+  "openai-compat": "openai-compat",
+  anthropic: "anthropic",
+} as const;
+
+export interface UpdateProviderBody {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  name?: string;
+  type?: UpdateProviderBodyType;
+  baseUrl?: string;
+  apiKey?: string;
+  enabled?: boolean;
+  models?: ProviderModel[];
+}
+
+export interface ProviderTestResult {
+  ok: boolean;
+  error?: string;
+  latencyMs?: number;
+  model?: string;
+}
+
+export type ChatMessageRole =
+  (typeof ChatMessageRole)[keyof typeof ChatMessageRole];
+
+export const ChatMessageRole = {
+  user: "user",
+  assistant: "assistant",
+  system: "system",
+} as const;
+
+export interface ChatMessage {
+  role: ChatMessageRole;
+  /** @minLength 1 */
+  content: string;
+}
+
+export interface ChatRequest {
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  messages: ChatMessage[];
+  /** @maxLength 128 */
+  conversationId?: string;
+  /** @maxLength 128 */
+  model?: string;
+  /** @maxLength 64 */
+  providerId?: string;
+}
+
+export type ControlActionBodyAction =
+  (typeof ControlActionBodyAction)[keyof typeof ControlActionBodyAction];
+
+export const ControlActionBodyAction = {
+  assistant_response: "assistant_response",
+  approve: "approve",
+  reject: "reject",
+  create_task: "create_task",
+  update_task: "update_task",
+  run_task: "run_task",
+  send_message: "send_message",
+} as const;
+
+export type ControlActionBodyPayload = { [key: string]: unknown };
+
+export interface ControlActionBody {
+  action: ControlActionBodyAction;
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  target?: string;
+  payload?: ControlActionBodyPayload;
+  requiresApproval?: boolean;
+  /** @maxLength 500 */
+  reason?: string;
+}
+
+export type ControlActionResponsePayload = { [key: string]: unknown };
+
+export type ControlActionResponseState =
+  (typeof ControlActionResponseState)[keyof typeof ControlActionResponseState];
+
+export const ControlActionResponseState = {
+  queued_for_approval: "queued_for_approval",
+  executed: "executed",
+} as const;
+
+export interface ControlActionResponse {
+  ok: boolean;
+  action: string;
+  target: string | null;
+  payload: ControlActionResponsePayload;
+  requiresApproval: boolean;
+  state: ControlActionResponseState;
+  message: string;
 }
 
 export type IntegrationCategory =

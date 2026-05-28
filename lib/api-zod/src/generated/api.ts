@@ -629,6 +629,50 @@ export const CreateLlmRouteBody = zod.object({
 });
 
 /**
+ * @summary Update an LLM routing rule
+ */
+export const UpdateLlmRouteParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateLlmRouteBodyNameMax = 256;
+
+export const updateLlmRouteBodyConditionMax = 1024;
+
+export const updateLlmRouteBodyTargetModelIdMax = 128;
+
+export const UpdateLlmRouteBody = zod.object({
+  name: zod.string().min(1).max(updateLlmRouteBodyNameMax).optional(),
+  condition: zod.string().min(1).max(updateLlmRouteBodyConditionMax).optional(),
+  targetModelId: zod
+    .string()
+    .min(1)
+    .max(updateLlmRouteBodyTargetModelIdMax)
+    .optional(),
+  priority: zod.number().min(1).optional(),
+  enabled: zod.boolean().optional(),
+});
+
+export const UpdateLlmRouteResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  condition: zod.string(),
+  targetModelId: zod.string(),
+  targetModelName: zod.string().optional(),
+  priority: zod.number().optional(),
+  enabled: zod.boolean(),
+  matchCount: zod.number().optional(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete an LLM routing rule
+ */
+export const DeleteLlmRouteParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
  * @summary Get LLM usage summary
  */
 export const GetLlmUsageResponse = zod.object({
@@ -648,6 +692,334 @@ export const GetLlmUsageResponse = zod.object({
   ),
   last24hTokens: zod.number().optional(),
   last7dTokens: zod.number().optional(),
+});
+
+/**
+ * @summary List configured AI providers
+ */
+export const ListProvidersResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      type: zod.enum(["openai-compat", "anthropic"]),
+      baseUrl: zod.string(),
+      apiKey: zod
+        .string()
+        .describe("Masked key value; plaintext keys are never returned."),
+      hasApiKey: zod.boolean(),
+      enabled: zod.boolean(),
+      models: zod.array(
+        zod.object({
+          id: zod.string(),
+          name: zod.string(),
+          contextWindow: zod.number(),
+          capabilities: zod.array(zod.string()),
+          costPer1kTokens: zod.number(),
+          avgLatencyMs: zod.number(),
+        }),
+      ),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Get provider by ID
+ */
+export const GetProviderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetProviderResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["openai-compat", "anthropic"]),
+  baseUrl: zod.string(),
+  apiKey: zod
+    .string()
+    .describe("Masked key value; plaintext keys are never returned."),
+  hasApiKey: zod.boolean(),
+  enabled: zod.boolean(),
+  models: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      contextWindow: zod.number(),
+      capabilities: zod.array(zod.string()),
+      costPer1kTokens: zod.number(),
+      avgLatencyMs: zod.number(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Create or replace a provider
+ */
+export const UpsertProviderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const upsertProviderBodyIdMax = 64;
+
+export const upsertProviderBodyNameMax = 128;
+
+export const UpsertProviderBody = zod.object({
+  id: zod
+    .string()
+    .min(1)
+    .max(upsertProviderBodyIdMax)
+    .optional()
+    .describe("Ignored in favor of the path ID when sent."),
+  name: zod.string().min(1).max(upsertProviderBodyNameMax),
+  type: zod.enum(["openai-compat", "anthropic"]).optional(),
+  baseUrl: zod.string().optional(),
+  apiKey: zod.string().optional(),
+  enabled: zod.boolean().optional(),
+  models: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+        contextWindow: zod.number(),
+        capabilities: zod.array(zod.string()),
+        costPer1kTokens: zod.number(),
+        avgLatencyMs: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const UpsertProviderResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["openai-compat", "anthropic"]),
+  baseUrl: zod.string(),
+  apiKey: zod
+    .string()
+    .describe("Masked key value; plaintext keys are never returned."),
+  hasApiKey: zod.boolean(),
+  enabled: zod.boolean(),
+  models: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      contextWindow: zod.number(),
+      capabilities: zod.array(zod.string()),
+      costPer1kTokens: zod.number(),
+      avgLatencyMs: zod.number(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update provider configuration
+ */
+export const UpdateProviderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateProviderBodyNameMax = 128;
+
+export const UpdateProviderBody = zod.object({
+  name: zod.string().min(1).max(updateProviderBodyNameMax).optional(),
+  type: zod.enum(["openai-compat", "anthropic"]).optional(),
+  baseUrl: zod.string().optional(),
+  apiKey: zod.string().optional(),
+  enabled: zod.boolean().optional(),
+  models: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+        contextWindow: zod.number(),
+        capabilities: zod.array(zod.string()),
+        costPer1kTokens: zod.number(),
+        avgLatencyMs: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const UpdateProviderResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["openai-compat", "anthropic"]),
+  baseUrl: zod.string(),
+  apiKey: zod
+    .string()
+    .describe("Masked key value; plaintext keys are never returned."),
+  hasApiKey: zod.boolean(),
+  enabled: zod.boolean(),
+  models: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      contextWindow: zod.number(),
+      capabilities: zod.array(zod.string()),
+      costPer1kTokens: zod.number(),
+      avgLatencyMs: zod.number(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a provider
+ */
+export const DeleteProviderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary Add or replace a provider model
+ */
+export const AddProviderModelParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const addProviderModelBodyContextWindowDefault = 128000;
+
+export const addProviderModelBodyCapabilitiesDefault = [`text`];
+export const addProviderModelBodyCostPer1kTokensDefault = 0;
+export const addProviderModelBodyCostPer1kTokensMin = 0;
+
+export const addProviderModelBodyAvgLatencyMsDefault = 1000;
+
+export const AddProviderModelBody = zod.object({
+  id: zod.string().min(1),
+  name: zod.string().min(1),
+  contextWindow: zod
+    .number()
+    .min(1)
+    .default(addProviderModelBodyContextWindowDefault),
+  capabilities: zod
+    .array(zod.string())
+    .default(addProviderModelBodyCapabilitiesDefault),
+  costPer1kTokens: zod
+    .number()
+    .min(addProviderModelBodyCostPer1kTokensMin)
+    .default(addProviderModelBodyCostPer1kTokensDefault),
+  avgLatencyMs: zod
+    .number()
+    .min(1)
+    .default(addProviderModelBodyAvgLatencyMsDefault),
+});
+
+/**
+ * @summary Delete a provider model
+ */
+export const DeleteProviderModelParams = zod.object({
+  id: zod.coerce.string(),
+  modelId: zod.coerce.string(),
+});
+
+export const DeleteProviderModelResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["openai-compat", "anthropic"]),
+  baseUrl: zod.string(),
+  apiKey: zod
+    .string()
+    .describe("Masked key value; plaintext keys are never returned."),
+  hasApiKey: zod.boolean(),
+  enabled: zod.boolean(),
+  models: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      contextWindow: zod.number(),
+      capabilities: zod.array(zod.string()),
+      costPer1kTokens: zod.number(),
+      avgLatencyMs: zod.number(),
+    }),
+  ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Test a provider connection
+ */
+export const TestProviderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const TestProviderResponse = zod.object({
+  ok: zod.boolean(),
+  error: zod.string().optional(),
+  latencyMs: zod.number().optional(),
+  model: zod.string().optional(),
+});
+
+/**
+ * @summary Stream an assistant chat response
+ */
+
+export const createChatStreamBodyMessagesMax = 100;
+
+export const createChatStreamBodyConversationIdMax = 128;
+
+export const createChatStreamBodyModelMax = 128;
+
+export const createChatStreamBodyProviderIdMax = 64;
+
+export const CreateChatStreamBody = zod.object({
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant", "system"]),
+        content: zod.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(createChatStreamBodyMessagesMax),
+  conversationId: zod
+    .string()
+    .max(createChatStreamBodyConversationIdMax)
+    .optional(),
+  model: zod.string().max(createChatStreamBodyModelMax).optional(),
+  providerId: zod.string().max(createChatStreamBodyProviderIdMax).optional(),
+});
+
+/**
+ * @summary Queue or execute a controlled assistant action
+ */
+export const createControlActionBodyTargetMax = 256;
+
+export const createControlActionBodyReasonMax = 500;
+
+export const CreateControlActionBody = zod.object({
+  action: zod.enum([
+    "assistant_response",
+    "approve",
+    "reject",
+    "create_task",
+    "update_task",
+    "run_task",
+    "send_message",
+  ]),
+  target: zod.string().min(1).max(createControlActionBodyTargetMax).optional(),
+  payload: zod.object({}).passthrough().optional(),
+  requiresApproval: zod.boolean().optional(),
+  reason: zod.string().max(createControlActionBodyReasonMax).optional(),
+});
+
+export const CreateControlActionResponse = zod.object({
+  ok: zod.boolean(),
+  action: zod.string(),
+  target: zod.string().nullable(),
+  payload: zod.object({}).passthrough(),
+  requiresApproval: zod.boolean(),
+  state: zod.enum(["queued_for_approval", "executed"]),
+  message: zod.string(),
 });
 
 /**

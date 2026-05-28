@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 type PersonaVectorResult = {
   vector: string;
@@ -32,7 +33,7 @@ async function run(): Promise<void> {
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), "omegabot-adhoc-p4-"));
   process.env.OMEGABOT_STATE_FILE = path.join(tmpDir, "state.json");
 
-  const logDir = path.resolve(process.cwd(), "scripts", "src", "adhoc", "logs");
+  const logDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "logs");
   await mkdir(logDir, { recursive: true });
 
   const { initializePlatformState, closePlatformState } = await import("../../../artifacts/api-server/src/lib/platform-state.ts");

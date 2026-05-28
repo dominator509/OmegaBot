@@ -1,5 +1,5 @@
 {
-  "endpointCount": 33,
+  "endpointCount": 45,
   "endpoints": [
     {
       "method": "GET",
@@ -98,8 +98,56 @@
       "path": "/llm/routes"
     },
     {
+      "method": "PATCH",
+      "path": "/llm/routes/{id}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/llm/routes/{id}"
+    },
+    {
       "method": "GET",
       "path": "/llm/usage"
+    },
+    {
+      "method": "GET",
+      "path": "/providers"
+    },
+    {
+      "method": "GET",
+      "path": "/providers/{id}"
+    },
+    {
+      "method": "PUT",
+      "path": "/providers/{id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/providers/{id}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/providers/{id}"
+    },
+    {
+      "method": "POST",
+      "path": "/providers/{id}/models"
+    },
+    {
+      "method": "DELETE",
+      "path": "/providers/{id}/models/{modelId}"
+    },
+    {
+      "method": "POST",
+      "path": "/providers/{id}/test"
+    },
+    {
+      "method": "POST",
+      "path": "/chat"
+    },
+    {
+      "method": "POST",
+      "path": "/control"
     },
     {
       "method": "GET",

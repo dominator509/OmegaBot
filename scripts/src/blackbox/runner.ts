@@ -40,10 +40,6 @@ function parseEndpoints(openapiText: string): Endpoint[] {
   return endpoints;
 }
 
-function toUrlPath(template: string, id = "blackbox-id"): string {
-  return template.replace(/\{[^}]+\}/g, id);
-}
-
 async function request(method: string, endpointPath: string, body?: unknown, headers?: Record<string, string>) {
   const url = `${BASE_URL}${endpointPath}`;
   const start = Date.now();
@@ -147,16 +143,23 @@ async function phase3() {
   const lines = ["# Phase 3 Results", ""];
   const createTask = await request("POST", "/tasks", { name: "workflow-task" });
   const taskId = typeof (createTask.body as any)?.id === "string" ? (createTask.body as any).id : "unknown";
-  const seq = [
+  const seq: Array<{
+    id: string;
+    endpoint: string;
+    method: string;
+    status: number;
+    expected: number[];
+    durationMs: number;
+  }> = [
     { id: "P3-WF-CREATE-TASK", method: "POST", endpoint: "/tasks", status: createTask.status, expected: [201], durationMs: createTask.durationMs },
     { id: "P3-WF-GET-TASK", ...(await request("GET", `/tasks/${taskId}`)), endpoint: `/tasks/${taskId}`, method: "GET", expected: [200] },
     { id: "P3-WF-LIST-TASKS", ...(await request("GET", "/tasks")), endpoint: "/tasks", method: "GET", expected: [200] },
     { id: "P3-WF-TASK-RUNS", ...(await request("GET", `/tasks/${taskId}/runs`)), endpoint: `/tasks/${taskId}/runs`, method: "GET", expected: [200] },
-  ] as const;
+  ];
 
   for (const s of seq) {
     const ok = s.expected.includes(s.status);
-    const row: CaseResult = { id: s.id, phase: 3, endpoint: s.endpoint, method: s.method, status: s.status, ok, expected: [...s.expected], durationMs: s.durationMs };
+    const row: CaseResult = { id: s.id, phase: 3, endpoint: s.endpoint, method: s.method, status: s.status, ok, expected: s.expected, durationMs: s.durationMs };
     pushResult(row);
     lines.push(resultLine(row));
   }
@@ -287,6 +290,10 @@ async function main() {
   }
   const openapi = await readFile(OPENAPI_PATH, "utf8");
   const endpoints = parseEndpoints(openapi);
+  if (targetPhase === 1) {
+    await phase1(endpoints);
+    return;
+  }
   const server: ChildProcess = spawn("corepack pnpm --filter @workspace/api-server run dev", [], {
     cwd: ROOT,
     env: {
@@ -303,7 +310,6 @@ async function main() {
 
   try {
     await waitForServer();
-    if (targetPhase === 1) await phase1(endpoints);
     if (targetPhase === 2) await phase2();
     if (targetPhase === 3) await phase3();
     if (targetPhase === 4) await phase4();
