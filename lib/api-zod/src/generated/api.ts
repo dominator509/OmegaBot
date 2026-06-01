@@ -578,6 +578,39 @@ export const GetAdapterHealthResponse = zod.object({
 });
 
 /**
+ * @summary List audit events
+ */
+export const listAuditEventsQueryLimitDefault = 100;
+export const listAuditEventsQueryLimitMax = 500;
+
+export const ListAuditEventsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listAuditEventsQueryLimitMax)
+    .default(listAuditEventsQueryLimitDefault),
+});
+
+export const ListAuditEventsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      action: zod.string(),
+      actor: zod.string(),
+      targetType: zod.string().optional(),
+      targetId: zod.string().optional(),
+      outcome: zod.enum(["success", "failure"]),
+      timestamp: zod.string(),
+      ip: zod.string().optional(),
+      origin: zod.string().optional(),
+      userAgent: zod.string().optional(),
+      metadata: zod.record(zod.string(), zod.unknown()).optional(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
  * @summary List available LLM models
  */
 export const ListLlmModelsResponse = zod.object({

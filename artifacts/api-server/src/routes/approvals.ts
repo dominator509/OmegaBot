@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { getWorkflowItems, setWorkflowItems } from "../lib/platform-state.js";
+import { recordAuditEvent } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -155,6 +156,13 @@ router.post("/approvals/:id/approve", async (req, res, next) => {
   };
   try {
     await setWorkflowItems("approvals", approvals);
+    await recordAuditEvent(req, {
+      action: "approval.approve",
+      outcome: "success",
+      targetType: "approval",
+      targetId: req.params.id,
+      metadata: { decidedBy: body.data.decidedBy ?? "operator" },
+    });
     res.json(approvals[idx]);
   } catch (error) {
     next(error);
@@ -187,6 +195,13 @@ router.post("/approvals/:id/reject", async (req, res, next) => {
   };
   try {
     await setWorkflowItems("approvals", approvals);
+    await recordAuditEvent(req, {
+      action: "approval.reject",
+      outcome: "success",
+      targetType: "approval",
+      targetId: req.params.id,
+      metadata: { decidedBy: body.data.decidedBy ?? "operator" },
+    });
     res.json(approvals[idx]);
   } catch (error) {
     next(error);

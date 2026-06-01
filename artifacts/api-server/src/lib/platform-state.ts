@@ -39,7 +39,7 @@ const PlatformStateSchema = z.object({
 });
 
 type PlatformState = z.infer<typeof PlatformStateSchema>;
-type WorkflowKey = "tasks" | "runs" | "commands" | "commandGroups" | "approvals" | "llmRoutes";
+type WorkflowKey = "tasks" | "runs" | "commands" | "commandGroups" | "approvals" | "llmRoutes" | "auditEvents";
 
 const WORKFLOW_TABLES: Record<WorkflowKey, string> = {
   tasks: "omegabot_tasks",
@@ -48,6 +48,7 @@ const WORKFLOW_TABLES: Record<WorkflowKey, string> = {
   commandGroups: "omegabot_command_groups",
   approvals: "omegabot_approvals",
   llmRoutes: "omegabot_llm_routes",
+  auditEvents: "omegabot_audit_events",
 };
 
 let settings: Record<string, unknown> = { ...DEFAULT_SETTINGS };

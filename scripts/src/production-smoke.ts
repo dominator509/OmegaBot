@@ -277,6 +277,7 @@ async function runChecks(): Promise<void> {
     "/api/approvals",
     "/api/events",
     "/api/adapters",
+    "/api/audit",
     "/api/providers",
     "/api/llm/models",
     "/api/llm/routes",
@@ -407,6 +408,13 @@ async function runChecks(): Promise<void> {
       }),
     });
     assert((route as { name?: string }).name === persistedRouteName, "LLM route creation through web /api proxy failed");
+
+    const audit = await fetchJson(`${webBase}/api/audit`);
+    const auditItems = (audit as { items?: Array<{ action?: string; outcome?: string }> }).items ?? [];
+    for (const action of ["auth.login", "settings.update", "provider.upsert", "approval.reject"]) {
+      assert(auditItems.some((item) => item.action === action && item.outcome === "success"), `Audit log did not record ${action}`);
+    }
+    assert(!JSON.stringify(audit).includes("smoke-secret"), "Audit log leaked provider API key");
   });
 
   await check("state survives api restart", async () => {
@@ -439,6 +447,13 @@ async function runChecks(): Promise<void> {
     const routes = await fetchJson(`${webBase}/api/llm/routes`);
     const routeItems = (routes as { items?: Array<{ name?: string }> }).items ?? [];
     assert(routeItems.some((item) => item.name === persistedRouteName), "LLM route did not survive API restart");
+
+    const audit = await fetchJson(`${webBase}/api/audit`);
+    const auditItems = (audit as { items?: Array<{ action?: string; outcome?: string }> }).items ?? [];
+    for (const action of ["provider.upsert", "approval.reject"]) {
+      assert(auditItems.some((item) => item.action === action && item.outcome === "success"), `Audit log ${action} event did not survive API restart`);
+    }
+    assert(!JSON.stringify(audit).includes("smoke-secret"), "Audit log leaked provider API key after restart");
   });
 
   if (!process.env.DATABASE_URL) {

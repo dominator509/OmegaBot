@@ -114,6 +114,7 @@ The API server (`artifacts/api-server/src/app.ts`) includes:
 - **Admin session auth**: Production requires `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET`. The dashboard signs in through `/api/auth/login`, stores an HTTP-only session cookie, checks `/api/auth/session`, and signs out through `/api/auth/logout`.
 - **Trusted mutation origins**: Cookie-authenticated production mutations require an `Origin`/`Referer` matching `ALLOWED_ORIGINS`; bearer-token machine requests bypass this browser-origin check.
 - **Provider secret encryption**: Production requires `PROVIDER_SECRET_KEY`; persisted provider API keys are AES-GCM encrypted at rest and decrypted only when hydrating the in-memory provider registry.
+- **Persistent audit log**: Auth events plus high-impact settings, provider, and approval mutations are stored in `auditEvents` and exposed through `GET /api/audit` without secret material.
 - **CORS**: Configurable via `ALLOWED_ORIGINS` env var (comma-separated list). Falls back to permissive in development.
 - **Body size limit**: 512kb max for JSON and URL-encoded bodies.
 - **Global error handler**: Returns JSON `{ error: message }` with correct status codes; stack traces hidden in production.

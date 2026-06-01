@@ -30,6 +30,35 @@ export interface LogoutResponse {
   authenticated: boolean;
 }
 
+export type AuditEventOutcome =
+  (typeof AuditEventOutcome)[keyof typeof AuditEventOutcome];
+
+export const AuditEventOutcome = {
+  success: "success",
+  failure: "failure",
+} as const;
+
+export type AuditEventMetadata = { [key: string]: unknown };
+
+export interface AuditEvent {
+  id: string;
+  action: string;
+  actor: string;
+  targetType?: string;
+  targetId?: string;
+  outcome: AuditEventOutcome;
+  timestamp: string;
+  ip?: string;
+  origin?: string;
+  userAgent?: string;
+  metadata?: AuditEventMetadata;
+}
+
+export interface AuditEventList {
+  items: AuditEvent[];
+  total: number;
+}
+
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
 export const TaskStatus = {
@@ -869,6 +898,14 @@ export type ListEventsParams = {
   type?: string;
   limit?: number;
   since?: string;
+};
+
+export type ListAuditEventsParams = {
+  /**
+   * @minimum 1
+   * @maximum 500
+   */
+  limit?: number;
 };
 
 export type ListChangePlansParams = {

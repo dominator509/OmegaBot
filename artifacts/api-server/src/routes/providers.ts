@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { providerRegistry } from "../lib/provider-registry.js";
 import { persistPlatformState } from "../lib/platform-state.js";
+import { recordAuditEvent } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -73,6 +74,16 @@ router.put("/providers/:id", async (req, res, next) => {
   try {
     const result = providerRegistry.upsert(body.data as Parameters<typeof providerRegistry.upsert>[0]);
     await persistPlatformState();
+    await recordAuditEvent(req, {
+      action: "provider.upsert",
+      outcome: "success",
+      targetType: "provider",
+      targetId: req.params.id,
+      metadata: {
+        enabled: result.enabled,
+        hasApiKey: result.hasApiKey,
+      },
+    });
     res.json(result);
   } catch (error) {
     next(error);
@@ -92,6 +103,17 @@ router.patch("/providers/:id", async (req, res, next) => {
       return;
     }
     await persistPlatformState();
+    await recordAuditEvent(req, {
+      action: "provider.patch",
+      outcome: "success",
+      targetType: "provider",
+      targetId: req.params.id,
+      metadata: {
+        fields: Object.keys(body.data).filter((key) => key !== "apiKey"),
+        apiKeyUpdated: body.data.apiKey !== undefined,
+        enabled: result.enabled,
+      },
+    });
     res.json(result);
   } catch (error) {
     next(error);
@@ -106,6 +128,12 @@ router.delete("/providers/:id", async (req, res, next) => {
   }
   try {
     await persistPlatformState();
+    await recordAuditEvent(req, {
+      action: "provider.delete",
+      outcome: "success",
+      targetType: "provider",
+      targetId: req.params.id,
+    });
     res.status(204).end();
   } catch (error) {
     next(error);
@@ -127,6 +155,13 @@ router.post("/providers/:id/models", async (req, res, next) => {
   try {
     const result = providerRegistry.patch(req.params.id, { models });
     await persistPlatformState();
+    await recordAuditEvent(req, {
+      action: "provider.model.add",
+      outcome: "success",
+      targetType: "provider",
+      targetId: req.params.id,
+      metadata: { modelId: body.data.id },
+    });
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -143,6 +178,13 @@ router.delete("/providers/:id/models/:modelId", async (req, res, next) => {
   try {
     const result = providerRegistry.patch(req.params.id, { models });
     await persistPlatformState();
+    await recordAuditEvent(req, {
+      action: "provider.model.delete",
+      outcome: "success",
+      targetType: "provider",
+      targetId: req.params.id,
+      metadata: { modelId: req.params.modelId },
+    });
     res.json(result);
   } catch (error) {
     next(error);

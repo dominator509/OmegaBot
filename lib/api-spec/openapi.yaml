@@ -24,6 +24,8 @@ tags:
     description: Event timeline
   - name: adapters
     description: Adapter registry and health
+  - name: audit
+    description: Persistent security and mutation audit log
   - name: llm
     description: LLM routing and models
   - name: providers
@@ -438,6 +440,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdapterHealth"
+
+  /audit:
+    get:
+      operationId: listAuditEvents
+      tags: [audit]
+      summary: List audit events
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        "200":
+          description: Audit event list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventList"
 
   /llm/models:
     get:
@@ -936,6 +959,46 @@ components:
         authenticated:
           type: boolean
       required: [authenticated]
+
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        actor:
+          type: string
+        targetType:
+          type: string
+        targetId:
+          type: string
+        outcome:
+          type: string
+          enum: [success, failure]
+        timestamp:
+          type: string
+        ip:
+          type: string
+        origin:
+          type: string
+        userAgent:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required: [id, action, actor, outcome, timestamp]
+
+    AuditEventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        total:
+          type: integer
+      required: [items, total]
 
     Task:
       type: object

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { getSettings, updateSettings } from "../lib/platform-state.js";
+import { recordAuditEvent } from "../lib/audit-log.js";
 
 const router = Router();
 
@@ -15,7 +16,14 @@ router.patch("/settings", async (req, res, next) => {
     return;
   }
   try {
-    res.json(await updateSettings(body.data));
+    const settings = await updateSettings(body.data);
+    await recordAuditEvent(req, {
+      action: "settings.update",
+      outcome: "success",
+      targetType: "settings",
+      metadata: { fields: Object.keys(body.data) },
+    });
+    res.json(settings);
   } catch (error) {
     next(error);
   }
